@@ -15,7 +15,7 @@ function App() {
       .then((data) =>
         setApiStatus(data.ok ? 'Connected' : 'Unexpected response')
       )
-      .catch(() => setApiStatus('Unavailable (start the backend on port 3000)'))
+      .catch(() => setApiStatus('Unavailable (start the backend on port 5000)'))
 
     fetch('/api/notes')
       .then((r) => r.json())

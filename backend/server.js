@@ -29,6 +29,23 @@ app.get('/', (req, res) => {
     res.send("Server is running and trying to connect to DB...");
 });
 
+app.get('/api/health', (req, res) => {
+    res.json({ ok: true });
+});
+
+app.get('/api/notes', (req, res) => {
+    db.query(
+        'SELECT id, body, created_at FROM notes ORDER BY id DESC LIMIT 10',
+        (err, rows) => {
+            if (err) {
+                console.error('❌ Failed to fetch notes:', err.message);
+                return res.status(500).json({ error: 'Failed to fetch notes' });
+            }
+            res.json(rows);
+        }
+    );
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);

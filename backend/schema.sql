@@ -1,7 +1,7 @@
 -- Run in MySQL (mysql client or Workbench) before using the sample /api/notes routes.
 
-CREATE DATABASE IF NOT EXISTS app_db;
-USE app_db;
+CREATE DATABASE IF NOT EXISTS em_db;
+USE em_db;
 
 CREATE TABLE IF NOT EXISTS notes (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
