@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NavLink } from "react-router-dom";
 
 function Contact() {
   const [form, setForm] = useState({
@@ -37,21 +38,21 @@ function Contact() {
           </div>
 
           <nav className="hidden items-center gap-6 md:flex text-sm text-white/70">
-            <a className="hover:text-white" href="#">
+            <NavLink className="hover:text-white" to="/">
               Home
-            </a>
-            <a className="hover:text-white" href="#">
+            </NavLink>
+            <NavLink className="hover:text-white" to="/about">
               About
-            </a>
-            <a className="hover:text-white" href="#speakers">
+            </NavLink>
+            <NavLink className="hover:text-white" to="/about#speakers">
               Speakers
-            </a>
-            <a className="hover:text-white" href="#insights">
+            </NavLink>
+            <NavLink className="hover:text-white" to="/about#insights">
               Insights
-            </a>
-            <a className="hover:text-white" href="#">
+            </NavLink>
+            <NavLink className="hover:text-white" to="/contact">
               Contact
-            </a>
+            </NavLink>
           </nav>
 
           <button className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">
@@ -341,24 +342,24 @@ function Contact() {
               <div className="text-sm font-semibold text-white">Useful Links</div>
               <ul className="mt-4 space-y-3 text-sm text-white/60">
                 <li>
-                  <a href="#" className="hover:text-white">
+                  <NavLink to="/about" className="hover:text-white">
                     About Us
-                  </a>
+                  </NavLink>
                 </li>
                 <li>
-                  <a href="#speakers" className="hover:text-white">
+                  <NavLink to="/about#speakers" className="hover:text-white">
                     Speakers
-                  </a>
+                  </NavLink>
                 </li>
                 <li>
-                  <a href="#insights" className="hover:text-white">
+                  <NavLink to="/about#insights" className="hover:text-white">
                     Insights
-                  </a>
+                  </NavLink>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white">
+                  <NavLink to="/contact" className="hover:text-white">
                     Contact
-                  </a>
+                  </NavLink>
                 </li>
               </ul>
             </div>
