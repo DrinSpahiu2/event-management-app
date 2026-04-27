@@ -84,9 +84,12 @@ function About() {
             </NavLink>
           </nav>
 
-          <button className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">
+          <NavLink
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            to="/signin"
+          >
             Get Started
-          </button>
+          </NavLink>
         </div>
       </header>
 

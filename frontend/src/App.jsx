@@ -9,12 +9,12 @@ import SignIn from "./signin.jsx";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<SignIn />} />
-      <Route path="/landing" element={<LandingPage />} />
+      <Route path="/signin" element={<SignIn />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/signin" replace />} />
     </Routes>
   );
 }
