@@ -1,11 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import AdminDashboard from "./layout/AdminDashboard.jsx";
+import EventDetailsPage from "./layout/EventDetailsPage.jsx";
 import Sponsor from "./layout/Sponsor.jsx";
+import TicketCheckoutPage from "./layout/TicketCheckoutPage.jsx";
 import About from "./pages/About.jsx";
 import Contact from "./pages/Contact.jsx";
 import LandingPage from "./landing/LandingPage.jsx";
 import SignIn from "./signin.jsx";
+import UserEventsPage from "./layout/UserEventsPage.jsx";
 
 function ProtectedRoute({ children }) {
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -53,4 +56,3 @@ export default function App() {
     </Routes>
   );
 }
-
