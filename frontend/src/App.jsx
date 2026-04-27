@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import AdminDashboard from "./layout/AdminDashboard.jsx";
+import SpeakerDashboard from "./layout/SpeakerDashboard.jsx";
 import About from "./pages/About.jsx";
 import Contact from "./pages/Contact.jsx";
 import LandingPage from "./landing/LandingPage.jsx";
@@ -12,6 +13,7 @@ export default function App() {
       <Route path="/signin" element={<SignIn />} />
       <Route path="/" element={<LandingPage />} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/speaker" element={<SpeakerDashboard />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="*" element={<Navigate to="/signin" replace />} />
