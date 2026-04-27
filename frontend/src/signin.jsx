@@ -1,5 +1,6 @@
-import { useId, useState } from 'react'
-import heroImg from './assets/hero.png'
+import { useId, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import heroImg from "./assets/hero.png";
 
 function IconEmail(props) {
   return (
@@ -22,7 +23,7 @@ function IconEmail(props) {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 function IconLock(props) {
@@ -51,7 +52,7 @@ function IconLock(props) {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 function IconGoogle(props) {
@@ -74,12 +75,19 @@ function IconGoogle(props) {
         d="M4.1 15.4l3.1-2.4c-.2-.6-.3-1.1-.3-1.8 0-.6.1-1.2.3-1.8L4 7.9C3.3 9.2 3 10.6 3 12s.3 2.8 1.1 3.9Z"
       />
     </svg>
-  )
+  );
 }
 
 export default function SignIn() {
-  const rememberId = useId()
-  const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate();
+  const rememberId = useId();
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleSignIn = (event) => {
+    event.preventDefault();
+    localStorage.setItem("isLoggedIn", "true");
+    navigate("/events");
+  };
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
@@ -114,7 +122,7 @@ export default function SignIn() {
               </p>
             </div>
 
-            <form className="mt-8 space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="mt-8 space-y-4" onSubmit={handleSignIn}>
               <div className="relative">
                 <IconEmail className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/45" />
                 <input
@@ -128,7 +136,7 @@ export default function SignIn() {
               <div className="relative">
                 <IconLock className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/45" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   placeholder="••••••"
                   className="h-12 w-full rounded-md border border-white/12 bg-white/5 pl-10 pr-24 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
@@ -138,7 +146,7 @@ export default function SignIn() {
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-white/70 hover:bg-white/8 hover:text-white"
                 >
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
 
@@ -176,7 +184,7 @@ export default function SignIn() {
             </form>
 
             <p className="mt-8 text-center text-sm text-white/55">
-              Don&apos;t Have An Account?{' '}
+              Don&apos;t Have An Account?{" "}
               <a href="#" className="font-semibold text-white hover:underline">
                 Sign up
               </a>
@@ -194,5 +202,5 @@ export default function SignIn() {
         </div>
       </div>
     </main>
-  )
+  );
 }

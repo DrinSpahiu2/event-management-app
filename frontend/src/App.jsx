@@ -7,16 +7,49 @@ import Contact from "./pages/Contact.jsx";
 import LandingPage from "./landing/LandingPage.jsx";
 import SignIn from "./signin.jsx";
 
+function ProtectedRoute({ children }) {
+  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+
+  if (!isLoggedIn) {
+    return <Navigate to="/signin" replace />;
+  }
+
+  return children;
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/signin" element={<SignIn />} />
       <Route path="/" element={<LandingPage />} />
+      <Route
+        path="/events"
+        element={
+          <ProtectedRoute>
+            <UserEventsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/events/:eventId"
+        element={
+          <ProtectedRoute>
+            <EventDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/events/:eventId/checkout"
+        element={
+          <ProtectedRoute>
+            <TicketCheckoutPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/sponsor" element={<Sponsor />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
-      <Route path="*" element={<Navigate to="/signin" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
