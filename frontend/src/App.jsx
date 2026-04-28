@@ -9,6 +9,8 @@ import Contact from "./pages/Contact.jsx";
 import LandingPage from "./landing/LandingPage.jsx";
 import SignIn from "./signin.jsx";
 import UserEventsPage from "./layout/UserEventsPage.jsx";
+import Menaxher from "./layout/Menaxher.jsx";
+import SpeakerDashboard from "./layout/SpeakerDashboard.jsx";
 
 function ProtectedRoute({ children }) {
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -25,6 +27,10 @@ export default function App() {
     <Routes>
       <Route path="/signin" element={<SignIn />} />
       <Route path="/" element={<LandingPage />} />
+      <Route path="/sponsors" element={<Sponsor />} />
+      <Route path="/menaxher" element={<Menaxher />} />
+      <Route path="/speaker" element={<SpeakerDashboard />} />
+
       <Route
         path="/events"
         element={
