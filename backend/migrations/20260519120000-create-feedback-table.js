@@ -2,7 +2,7 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('EventSponsors', {
+    await queryInterface.createTable('Feedback', {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -15,22 +15,22 @@ module.exports = {
         allowNull: false
       },
 
-      sponsor_id: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false
       },
 
-      shuma: {
-        type: Sequelize.DECIMAL(10, 2),
+      vleresimi: {
+        type: Sequelize.INTEGER,
         allowNull: false
       },
 
-      createdAt: {
-        type: Sequelize.DATE,
-        allowNull: false
+      komenti: {
+        type: Sequelize.TEXT,
+        allowNull: true
       },
 
-      updatedAt: {
+      data: {
         type: Sequelize.DATE,
         allowNull: false
       }
@@ -38,6 +38,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('EventSponsors');
+    await queryInterface.dropTable('Feedback');
   }
 };
