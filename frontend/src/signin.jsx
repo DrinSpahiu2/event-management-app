@@ -81,12 +81,127 @@ function IconGoogle(props) {
 export default function SignIn() {
   const navigate = useNavigate();
   const rememberId = useId();
+  const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSignIn = (event) => {
+  const [formData, setFormData] = useState({
+    email: "",
+    passwordi: "",
+    emri: "",
+    mbiemri: "",
+    telefoni: "",
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSignIn = async (event) => {
     event.preventDefault();
-    localStorage.setItem("isLoggedIn", "true");
-    navigate("/events");
+    setLoading(true);
+    setErrorMessage("");
+    setMessage("");
+
+    try {
+      const response = await fetch("http://localhost:5000/api/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          passwordi: formData.passwordi,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Sign in failed");
+      }
+
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("userId", data.userId);
+      localStorage.setItem("userEmail", data.email);
+      localStorage.setItem("userType", data.user_type_id);
+      setMessage("✅ Sign in successful!");
+
+      // Redirect based on user role
+      setTimeout(() => {
+        if (data.user_type_id === 1) {
+          // SuperAdmin
+          navigate("/admin");
+        } else {
+          navigate("/events");
+        }
+      }, 1500);
+    } catch (error) {
+      setErrorMessage("❌ " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setErrorMessage("");
+    setMessage("");
+
+    try {
+      if (
+        !formData.emri ||
+        !formData.mbiemri ||
+        !formData.email ||
+        !formData.passwordi
+      ) {
+        throw new Error("Please fill in all required fields");
+      }
+
+      const response = await fetch("http://localhost:5000/api/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Sign up failed");
+      }
+
+      setMessage("✅ Account created successfully! Signing you in...");
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("userId", data.userId);
+      localStorage.setItem("userEmail", data.email);
+      setTimeout(() => navigate("/events"), 1500);
+    } catch (error) {
+      setErrorMessage("❌ " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setErrorMessage("");
+    setMessage("");
+    setFormData({
+      email: "",
+      passwordi: "",
+      emri: "",
+      mbiemri: "",
+      telefoni: "",
+    });
   };
 
   return (
@@ -104,31 +219,92 @@ export default function SignIn() {
                 </span>
               </div>
               <nav className="flex items-center gap-5 text-sm text-white/70">
-                <a className="hover:text-white" href="#">
+                <button
+                  onClick={() => !isSignUp && setIsSignUp(false)}
+                  className={`hover:text-white ${!isSignUp ? "text-white" : ""}`}
+                >
                   Sign in
-                </a>
-                <a className="hover:text-white" href="#">
+                </button>
+                <button
+                  onClick={() => setIsSignUp(true)}
+                  className={`hover:text-white ${isSignUp ? "text-white" : ""}`}
+                >
                   Sign Up
-                </a>
+                </button>
               </nav>
             </header>
 
             <div className="mt-10">
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                Welcome To EventEMS
+                {isSignUp ? "Create Account" : "Welcome To EventEMS"}
               </h1>
               <p className="mt-2 text-sm text-white/55">
-                The faster you fill up, the faster you get a ticket
+                {isSignUp
+                  ? "Sign up to get started with EventEMS"
+                  : "The faster you fill up, the faster you get a ticket"}
               </p>
             </div>
 
-            <form className="mt-8 space-y-4" onSubmit={handleSignIn}>
+            {message && (
+              <div className="mt-4 rounded-md bg-green-500/20 border border-green-500/50 p-3 text-sm text-green-400">
+                {message}
+              </div>
+            )}
+
+            {errorMessage && (
+              <div className="mt-4 rounded-md bg-red-500/20 border border-red-500/50 p-3 text-sm text-red-400">
+                {errorMessage}
+              </div>
+            )}
+
+            <form
+              className="mt-8 space-y-4 max-h-96 overflow-y-auto"
+              onSubmit={isSignUp ? handleSignUp : handleSignIn}
+            >
+              {isSignUp && (
+                <>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="emri"
+                      placeholder="First Name"
+                      value={formData.emri}
+                      onChange={handleInputChange}
+                      className="h-12 w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
+                    />
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="mbiemri"
+                      placeholder="Last Name"
+                      value={formData.mbiemri}
+                      onChange={handleInputChange}
+                      className="h-12 w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
+                    />
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      name="telefoni"
+                      placeholder="Phone Number (optional)"
+                      value={formData.telefoni}
+                      onChange={handleInputChange}
+                      className="h-12 w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
+                    />
+                  </div>
+                </>
+              )}
+
               <div className="relative">
                 <IconEmail className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/45" />
                 <input
                   type="email"
+                  name="email"
                   autoComplete="email"
-                  placeholder="admin@eventems.com"
+                  placeholder="your@email.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
                   className="h-12 w-full rounded-md border border-white/12 bg-white/5 pl-10 pr-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
                 />
               </div>
@@ -137,8 +313,11 @@ export default function SignIn() {
                 <IconLock className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-white/45" />
                 <input
                   type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
+                  name="passwordi"
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
                   placeholder="••••••"
+                  value={formData.passwordi}
+                  onChange={handleInputChange}
                   className="h-12 w-full rounded-md border border-white/12 bg-white/5 pl-10 pr-24 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
                 />
                 <button
@@ -150,44 +329,58 @@ export default function SignIn() {
                 </button>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <label
-                  htmlFor={rememberId}
-                  className="flex select-none items-center gap-2 text-white/70"
-                >
-                  <input
-                    id={rememberId}
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-white/20 bg-white/5 accent-rose-500"
-                  />
-                  Remember Me
-                </label>
-                <a className="text-white/70 hover:text-white" href="#">
-                  Forget Password?
-                </a>
-              </div>
+              {!isSignUp && (
+                <div className="flex items-center justify-between text-sm">
+                  <label
+                    htmlFor={rememberId}
+                    className="flex select-none items-center gap-2 text-white/70"
+                  >
+                    <input
+                      id={rememberId}
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-white/20 bg-white/5 accent-rose-500"
+                    />
+                    Remember Me
+                  </label>
+                  <a className="text-white/70 hover:text-white" href="#">
+                    Forget Password?
+                  </a>
+                </div>
+              )}
 
               <button
                 type="submit"
-                className="mt-1 inline-flex h-12 w-full items-center justify-center rounded-md bg-gradient-to-r from-rose-500 to-orange-400 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60"
+                disabled={loading}
+                className="mt-1 inline-flex h-12 w-full items-center justify-center rounded-md bg-gradient-to-r from-rose-500 to-orange-400 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/60 disabled:opacity-50"
               >
-                Sign in
+                {loading
+                  ? "Processing..."
+                  : isSignUp
+                    ? "Create Account"
+                    : "Sign in"}
               </button>
 
-              <button
-                type="button"
-                className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md border border-white/12 bg-white/5 text-sm font-semibold text-white/90 transition hover:bg-white/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-              >
-                <IconGoogle className="h-5 w-5" />
-                Sign In With Google
-              </button>
+              {!isSignUp && (
+                <button
+                  type="button"
+                  className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md border border-white/12 bg-white/5 text-sm font-semibold text-white/90 transition hover:bg-white/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                >
+                  <IconGoogle className="h-5 w-5" />
+                  Sign In With Google
+                </button>
+              )}
             </form>
 
             <p className="mt-8 text-center text-sm text-white/55">
-              Don&apos;t Have An Account?{" "}
-              <a href="#" className="font-semibold text-white hover:underline">
-                Sign up
-              </a>
+              {isSignUp
+                ? "Already have an account? "
+                : "Don&apos;t Have An Account? "}
+              <button
+                onClick={handleToggleMode}
+                className="font-semibold text-white hover:underline"
+              >
+                {isSignUp ? "Sign in" : "Sign up"}
+              </button>
             </p>
           </section>
 
