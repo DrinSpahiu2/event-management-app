@@ -97,10 +97,7 @@ export default function SignIn() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSignIn = async (event) => {
@@ -112,9 +109,7 @@ export default function SignIn() {
     try {
       const response = await fetch("http://localhost:5000/api/signin", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: formData.email,
           passwordi: formData.passwordi,
@@ -127,19 +122,34 @@ export default function SignIn() {
         throw new Error(data.error || "Sign in failed");
       }
 
+      // Save user session details
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userId", data.userId);
       localStorage.setItem("userEmail", data.email);
-      localStorage.setItem("userType", data.user_type_id);
+      localStorage.setItem("userRole", data.role); // Save text string instead of numeric ID
+
       setMessage("✅ Sign in successful!");
 
-      // Redirect based on user role
+      // Route them smoothly based on their clean database string name
       setTimeout(() => {
-        if (data.user_type_id === 1) {
-          // SuperAdmin
-          navigate("/admin");
-        } else {
-          navigate("/events");
+        switch (data.role) {
+          case "SuperAdmin":
+            navigate("/admin");
+            break;
+          case "Manager":
+            navigate("/menaxher");
+            break;
+          case "Speaker":
+            navigate("/speaker");
+            break;
+          case "Sponsor":
+            navigate("/sponsors");
+            break;
+          case "Client":
+            navigate("/events");
+            break;
+          default:
+            navigate("/");
         }
       }, 1500);
     } catch (error) {
@@ -167,9 +177,7 @@ export default function SignIn() {
 
       const response = await fetch("http://localhost:5000/api/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
@@ -183,6 +191,8 @@ export default function SignIn() {
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userId", data.userId);
       localStorage.setItem("userEmail", data.email);
+      localStorage.setItem("userRole", "Client"); // Default text role for newly signed-up accounts
+
       setTimeout(() => navigate("/events"), 1500);
     } catch (error) {
       setErrorMessage("❌ " + error.message);
@@ -220,13 +230,15 @@ export default function SignIn() {
               </div>
               <nav className="flex items-center gap-5 text-sm text-white/70">
                 <button
-                  onClick={() => !isSignUp && setIsSignUp(false)}
+                  type="button"
+                  onClick={() => isSignUp && handleToggleMode()}
                   className={`hover:text-white ${!isSignUp ? "text-white" : ""}`}
                 >
                   Sign in
                 </button>
                 <button
-                  onClick={() => setIsSignUp(true)}
+                  type="button"
+                  onClick={() => !isSignUp && handleToggleMode()}
                   className={`hover:text-white ${isSignUp ? "text-white" : ""}`}
                 >
                   Sign Up
@@ -250,7 +262,6 @@ export default function SignIn() {
                 {message}
               </div>
             )}
-
             {errorMessage && (
               <div className="mt-4 rounded-md bg-red-500/20 border border-red-500/50 p-3 text-sm text-red-400">
                 {errorMessage}
@@ -263,36 +274,30 @@ export default function SignIn() {
             >
               {isSignUp && (
                 <>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="emri"
-                      placeholder="First Name"
-                      value={formData.emri}
-                      onChange={handleInputChange}
-                      className="h-12 w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
-                    />
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="mbiemri"
-                      placeholder="Last Name"
-                      value={formData.mbiemri}
-                      onChange={handleInputChange}
-                      className="h-12 w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
-                    />
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      name="telefoni"
-                      placeholder="Phone Number (optional)"
-                      value={formData.telefoni}
-                      onChange={handleInputChange}
-                      className="h-12 w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    name="emri"
+                    placeholder="First Name"
+                    value={formData.emri}
+                    onChange={handleInputChange}
+                    className="h-12 w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
+                  />
+                  <input
+                    type="text"
+                    name="mbiemri"
+                    placeholder="Last Name"
+                    value={formData.mbiemri}
+                    onChange={handleInputChange}
+                    className="h-12 w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
+                  />
+                  <input
+                    type="tel"
+                    name="telefoni"
+                    placeholder="Phone Number (optional)"
+                    value={formData.telefoni}
+                    onChange={handleInputChange}
+                    className="h-12 w-full rounded-md border border-white/12 bg-white/5 px-3 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-white/25 focus:bg-white/7"
+                  />
                 </>
               )}
 
@@ -339,7 +344,7 @@ export default function SignIn() {
                       id={rememberId}
                       type="checkbox"
                       className="h-4 w-4 rounded border-white/20 bg-white/5 accent-rose-500"
-                    />
+                    />{" "}
                     Remember Me
                   </label>
                   <a className="text-white/70 hover:text-white" href="#">
@@ -365,8 +370,7 @@ export default function SignIn() {
                   type="button"
                   className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-md border border-white/12 bg-white/5 text-sm font-semibold text-white/90 transition hover:bg-white/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                 >
-                  <IconGoogle className="h-5 w-5" />
-                  Sign In With Google
+                  <IconGoogle className="h-5 w-5" /> Sign In With Google
                 </button>
               )}
             </form>
@@ -374,8 +378,9 @@ export default function SignIn() {
             <p className="mt-8 text-center text-sm text-white/55">
               {isSignUp
                 ? "Already have an account? "
-                : "Don&apos;t Have An Account? "}
+                : "Don't Have An Account? "}
               <button
+                type="button"
                 onClick={handleToggleMode}
                 className="font-semibold text-white hover:underline"
               >

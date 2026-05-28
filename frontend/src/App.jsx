@@ -12,11 +12,17 @@ import UserEventsPage from "./layout/UserEventsPage.jsx";
 import Menaxher from "./layout/Menaxher.jsx";
 import SpeakerDashboard from "./layout/SpeakerDashboard.jsx";
 
-function ProtectedRoute({ children }) {
+// Protected Route Component that handles permissions
+function ProtectedRoute({ children, allowedRoles }) {
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const userRole = localStorage.getItem("userRole"); // Reads 'SuperAdmin', 'Manager', etc.
 
   if (!isLoggedIn) {
     return <Navigate to="/signin" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
+    return <Navigate to="/" replace />; // Kicks unauthorized users back to the home page
   }
 
   return children;
@@ -25,16 +31,57 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <Routes>
+      {/* Public Pages */}
       <Route path="/signin" element={<SignIn />} />
       <Route path="/" element={<LandingPage />} />
-      <Route path="/sponsors" element={<Sponsor />} />
-      <Route path="/menaxher" element={<Menaxher />} />
-      <Route path="/speaker" element={<SpeakerDashboard />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
 
+      {/* 👑 SuperAdmin Dashboard */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["SuperAdmin"]}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 💼 Manager Dashboard */}
+      <Route
+        path="/menaxher"
+        element={
+          <ProtectedRoute allowedRoles={["Manager"]}>
+            <Menaxher />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 🎤 Speaker Dashboard */}
+      <Route
+        path="/speaker"
+        element={
+          <ProtectedRoute allowedRoles={["Speaker"]}>
+            <SpeakerDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 🤝 Sponsor Dashboard */}
+      <Route
+        path="/sponsors"
+        element={
+          <ProtectedRoute allowedRoles={["Sponsor"]}>
+            <Sponsor />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 👥 Client / Attendee Ecosystem */}
       <Route
         path="/events"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Client", "SuperAdmin"]}>
             <UserEventsPage />
           </ProtectedRoute>
         }
@@ -42,7 +89,7 @@ export default function App() {
       <Route
         path="/events/:eventId"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Client", "SuperAdmin"]}>
             <EventDetailsPage />
           </ProtectedRoute>
         }
@@ -50,14 +97,13 @@ export default function App() {
       <Route
         path="/events/:eventId/checkout"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["Client", "SuperAdmin"]}>
             <TicketCheckoutPage />
           </ProtectedRoute>
         }
       />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/contact" element={<Contact />} />
+
+      {/* Global Fallback Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
