@@ -2,75 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 
 const sidebarLinks = ["Dashboard", "Event List", "Upload Materials", "Calendar", "Statistics", "Profile"];
 
-const upcomingEvents = [
-  {
-    id: "evt-up-1",
-    title: "Digital Business Summit - 2026",
-    host: "Event EMS",
-    time: "9:00am - 10:30am",
-    location: "California, CA",
-    date: "Apr 30, 2026",
-    status: "Upcoming",
-    assignedBy: "Manager",
-    requestedOn: "Apr 22, 2026",
-  },
-  {
-    id: "evt-up-2",
-    title: "Product Design Conference - 2026",
-    host: "Event EMS",
-    time: "1:00pm - 2:00pm",
-    location: "Los Angeles, CA",
-    date: "May 03, 2026",
-    status: "Upcoming",
-    assignedBy: "Manager",
-    requestedOn: "Apr 20, 2026",
-  },
-  {
-    id: "evt-up-3",
-    title: "Startup Pitch Night - 2026",
-    host: "Event EMS",
-    time: "5:00pm - 6:00pm",
-    location: "San Francisco, CA",
-    date: "May 10, 2026",
-    status: "Upcoming",
-    assignedBy: "Manager",
-    requestedOn: "Apr 19, 2026",
-  },
-];
-
-const pastEvents = [
-  {
-    title: "NASA Space Apps Challenge - 2026",
-    host: "Event EMS",
-    time: "10:00am - 11:00am",
-    location: "San Francisco, CA",
-    date: "Mar 12, 2026",
-    status: "Completed",
-    attendees: 420,
-    rating: 4.8,
-  },
-  {
-    title: "AI & Healthcare Forum - 2026",
-    host: "Event EMS",
-    time: "2:00pm - 3:00pm",
-    location: "San Diego, CA",
-    date: "Feb 27, 2026",
-    status: "Completed",
-    attendees: 310,
-    rating: 4.6,
-  },
-  {
-    title: "Frontend Futures Meetup - 2026",
-    host: "Event EMS",
-    time: "6:00pm - 7:00pm",
-    location: "Remote",
-    date: "Jan 19, 2026",
-    status: "Completed",
-    attendees: 690,
-    rating: 4.7,
-  },
-];
-
 function Badge({ tone = "neutral", children }) {
   const toneStyles =
     tone === "success"
@@ -88,13 +19,10 @@ function Badge({ tone = "neutral", children }) {
 
 function SpeakerDashboard() {
   const [activePage, setActivePage] = useState("Dashboard");
-  const [assignedUpcomingEvents, setAssignedUpcomingEvents] = useState(
-    upcomingEvents.map((e) => ({
-      ...e,
-      assignmentStatus: "Pending", // Pending | Accepted | Declined
-      checkedIn: false,
-    })),
-  );
+  const [assignedUpcomingEvents, setAssignedUpcomingEvents] = useState([]);
+  const [speakerPastEvents, setSpeakerPastEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsError, setEventsError] = useState("");
   const [materials, setMaterials] = useState([
     { name: "Keynote Deck.pdf", type: "Slides", updated: "Apr 14, 2026", url: null },
     { name: "Demo Repo.zip", type: "Code", updated: "Apr 18, 2026", url: null },
@@ -108,6 +36,29 @@ function SpeakerDashboard() {
     };
   }, [materialObjectUrls]);
 
+  useEffect(() => {
+    const email = localStorage.getItem("userEmail");
+    if (!email) {
+      setEventsError("Nuk u gjet email i përdoruesit. Kyçu përsëri.");
+      setEventsLoading(false);
+      return;
+    }
+
+    setEventsLoading(true);
+    fetch(`/api/speaker/events?email=${encodeURIComponent(email)}`)
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) throw new Error(data.error || "Gabim");
+        setAssignedUpcomingEvents(data.upcoming || []);
+        setSpeakerPastEvents(data.past || []);
+        setEventsError("");
+      })
+      .catch((err) => {
+        setEventsError(err.message || "Nuk u ngarkuan eventet.");
+      })
+      .finally(() => setEventsLoading(false));
+  }, []);
+
   const acceptedUpcoming = useMemo(
     () => assignedUpcomingEvents.filter((e) => e.assignmentStatus === "Accepted"),
     [assignedUpcomingEvents],
@@ -118,26 +69,35 @@ function SpeakerDashboard() {
   );
 
   const statsFromPastEvents = useMemo(() => {
-    const totalAttendees = pastEvents.reduce((sum, e) => sum + (e.attendees ?? 0), 0);
+    const totalAttendees = speakerPastEvents.reduce(
+      (sum, e) => sum + (e.attendees ?? 0),
+      0,
+    );
     const avgRating =
-      pastEvents.length === 0
+      speakerPastEvents.length === 0
         ? 0
-        : pastEvents.reduce((sum, e) => sum + (e.rating ?? 0), 0) / pastEvents.length;
+        : speakerPastEvents.reduce((sum, e) => sum + (e.rating ?? 0), 0) /
+          speakerPastEvents.length;
     return {
       totalAttendees,
       avgRating: Number.isFinite(avgRating) ? avgRating : 0,
-      eventsCount: pastEvents.length,
+      eventsCount: speakerPastEvents.length,
     };
-  }, []);
+  }, [speakerPastEvents]);
 
   const speakerStatCards = useMemo(
     () => [
-      { label: "Upcoming Talks", value: String(acceptedUpcoming.length), icon: "🎤" },
+      { label: "Upcoming Talks", value: String(assignedUpcomingEvents.length), icon: "🎤" },
       { label: "Materials Uploaded", value: String(materials.length), icon: "📎" },
-      { label: "Past Events", value: String(pastEvents.length), icon: "✅" },
+      { label: "Past Events", value: String(speakerPastEvents.length), icon: "✅" },
       { label: "Avg. Rating", value: statsFromPastEvents.avgRating.toFixed(1), icon: "⭐" },
     ],
-    [acceptedUpcoming.length, materials.length, statsFromPastEvents.avgRating],
+    [
+      assignedUpcomingEvents.length,
+      materials.length,
+      speakerPastEvents.length,
+      statsFromPastEvents.avgRating,
+    ],
   );
 
   const breadcrumb = useMemo(() => `Home / Speaker / ${activePage}`, [activePage]);
@@ -160,24 +120,69 @@ function SpeakerDashboard() {
     return "Declined";
   }
 
-  function acceptAssignment(eventId) {
+  async function patchAssignment(assignmentId, body) {
+    const email = localStorage.getItem("userEmail");
+    if (!email) {
+      setEventsError("Nuk u gjet email i përdoruesit.");
+      return null;
+    }
+    const res = await fetch(`/api/speaker/assignments/${assignmentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, ...body }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Gabim");
+    return data;
+  }
+
+  function updateUpcomingItem(updated) {
     setAssignedUpcomingEvents((prev) =>
-      prev.map((e) => (e.id === eventId ? { ...e, assignmentStatus: "Accepted" } : e)),
+      prev.map((e) => (e.assignmentId === updated.assignmentId ? updated : e)),
     );
   }
 
-  function declineAssignment(eventId) {
-    setAssignedUpcomingEvents((prev) =>
-      prev.map((e) => (e.id === eventId ? { ...e, assignmentStatus: "Declined" } : e)),
-    );
+  async function acceptAssignment(assignmentId) {
+    if (!assignmentId) {
+      setEventsError("Caktimi nuk është i vlefshëm. Rifresko faqen.");
+      return;
+    }
+    try {
+      const updated = await patchAssignment(assignmentId, {
+        assignment_status: "accepted",
+      });
+      if (updated) updateUpcomingItem(updated);
+    } catch (err) {
+      setEventsError(err.message || "Nuk u pranua caktimi.");
+    }
   }
 
-  function checkIn(eventId) {
-    setAssignedUpcomingEvents((prev) =>
-      prev.map((e) =>
-        e.id === eventId && e.assignmentStatus === "Accepted" ? { ...e, checkedIn: true } : e,
-      ),
-    );
+  async function declineAssignment(assignmentId) {
+    if (!assignmentId) {
+      setEventsError("Caktimi nuk është i vlefshëm. Rifresko faqen.");
+      return;
+    }
+    try {
+      const updated = await patchAssignment(assignmentId, {
+        assignment_status: "declined",
+      });
+      if (updated) updateUpcomingItem(updated);
+    } catch (err) {
+      setEventsError(err.message || "Nuk u refuzua caktimi.");
+    }
+  }
+
+  async function checkIn(assignmentId) {
+    if (!assignmentId) {
+      setEventsError("Caktimi nuk është i vlefshëm. Rifresko faqen.");
+      return;
+    }
+    try {
+      const updated = await patchAssignment(assignmentId, { checked_in: true });
+      if (updated) updateUpcomingItem(updated);
+    } catch (err) {
+      setEventsError(err.message || "Nuk u bë check-in.");
+    }
   }
 
   function renderMain() {
@@ -193,6 +198,17 @@ function SpeakerDashboard() {
               </div>
             </div>
             <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
+              {eventsLoading ? (
+                <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar eventet...</li>
+              ) : null}
+              {eventsError ? (
+                <li className="text-[13px] text-rose-300">{eventsError}</li>
+              ) : null}
+              {!eventsLoading && !eventsError && assignedUpcomingEvents.length === 0 ? (
+                <li className="text-[13px] text-[#95a2ba]">
+                  Nuk ke evente të ardhshme të caktuara.
+                </li>
+              ) : null}
               {assignedUpcomingEvents.map((event) => (
                 <li
                   key={event.id}
@@ -200,6 +216,9 @@ function SpeakerDashboard() {
                 >
                   <div className="min-w-0">
                     <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">{event.title}</h4>
+                    {event.tema ? (
+                      <p className="mt-1 text-[13px] text-[#7dd3a8]">Tema: {event.tema}</p>
+                    ) : null}
                     <p className="mt-1 text-[13px] text-[#95a2ba]">
                       {event.date} · {event.time} · {event.location}
                     </p>
@@ -216,14 +235,14 @@ function SpeakerDashboard() {
                         <button
                           className="rounded-[10px] border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-[13px] text-emerald-100 transition hover:bg-emerald-400/15"
                           type="button"
-                          onClick={() => acceptAssignment(event.id)}
+                          onClick={() => acceptAssignment(event.assignmentId)}
                         >
                           Accept
                         </button>
                         <button
                           className="rounded-[10px] border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-[13px] text-rose-100 transition hover:bg-rose-400/15"
                           type="button"
-                          onClick={() => declineAssignment(event.id)}
+                          onClick={() => declineAssignment(event.assignmentId)}
                         >
                           Refuse
                         </button>
@@ -233,7 +252,7 @@ function SpeakerDashboard() {
                       <button
                         className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
                         type="button"
-                        onClick={() => checkIn(event.id)}
+                        onClick={() => checkIn(event.assignmentId)}
                         disabled={event.checkedIn}
                       >
                         {event.checkedIn ? "Checked in" : "Check in"}
@@ -248,21 +267,27 @@ function SpeakerDashboard() {
           <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
             <div className="mb-3.5 flex items-center justify-between">
               <h3 className="m-0 text-xl text-[#f4f7fb]">Past Events</h3>
-              <Badge tone="success">{pastEvents.length} completed</Badge>
+              <Badge tone="success">{speakerPastEvents.length} completed</Badge>
             </div>
             <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
-              {pastEvents.map((event) => (
+              {!eventsLoading && speakerPastEvents.length === 0 ? (
+                <li className="text-[13px] text-[#95a2ba]">Nuk ke evente të kaluara.</li>
+              ) : null}
+              {speakerPastEvents.map((event) => (
                 <li
-                  key={event.title}
+                  key={event.id}
                   className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
                 >
                   <div className="min-w-0">
                     <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">{event.title}</h4>
+                    {event.tema ? (
+                      <p className="mt-1 text-[13px] text-[#7dd3a8]">Tema: {event.tema}</p>
+                    ) : null}
                     <p className="mt-1 text-[13px] text-[#95a2ba]">
                       {event.date} · {event.time} · {event.location}
                     </p>
                     <p className="mt-1 text-[13px] text-[#95a2ba]">
-                      {event.attendees} attendees · {event.rating} rating
+                      {event.attendees} attendees
                     </p>
                   </div>
                   <Badge tone="success">Completed</Badge>
@@ -561,6 +586,9 @@ function SpeakerDashboard() {
               </button>
             </div>
             <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
+              {!eventsLoading && assignedUpcomingEvents.length === 0 ? (
+                <li className="text-[13px] text-[#95a2ba]">Nuk ke sesione të ardhshme.</li>
+              ) : null}
               {assignedUpcomingEvents.slice(0, 3).map((event) => (
                 <li
                   key={event.id}
@@ -568,6 +596,9 @@ function SpeakerDashboard() {
                 >
                   <div className="min-w-0">
                     <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">{event.title}</h4>
+                    {event.tema ? (
+                      <p className="mt-1 text-[13px] text-[#7dd3a8]">Tema: {event.tema}</p>
+                    ) : null}
                     <p className="mt-1 text-[13px] text-[#95a2ba]">
                       {event.date} · {event.time} · {event.location}
                     </p>
@@ -590,14 +621,14 @@ function SpeakerDashboard() {
                         <button
                           className="rounded-[10px] border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-[13px] text-emerald-100 transition hover:bg-emerald-400/15"
                           type="button"
-                          onClick={() => acceptAssignment(event.id)}
+                          onClick={() => acceptAssignment(event.assignmentId)}
                         >
                           Accept
                         </button>
                         <button
                           className="rounded-[10px] border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-[13px] text-rose-100 transition hover:bg-rose-400/15"
                           type="button"
-                          onClick={() => declineAssignment(event.id)}
+                          onClick={() => declineAssignment(event.assignmentId)}
                         >
                           Refuse
                         </button>
@@ -607,7 +638,7 @@ function SpeakerDashboard() {
                       <button
                         className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
                         type="button"
-                        onClick={() => checkIn(event.id)}
+                        onClick={() => checkIn(event.assignmentId)}
                         disabled={event.checkedIn}
                       >
                         {event.checkedIn ? "Checked in" : "Check in"}

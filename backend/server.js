@@ -121,6 +121,14 @@ app.post("/api/signin", async (req, res) => {
   }
 });
 
+// --- MANAGER DASHBOARD ---
+const managerRoutes = require("./routes/managerRoutes");
+app.use("/api/manager", managerRoutes);
+
+// --- SPEAKER DASHBOARD ---
+const speakerRoutes = require("./routes/speakerRoutes");
+app.use("/api/speaker", speakerRoutes);
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
