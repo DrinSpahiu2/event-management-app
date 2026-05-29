@@ -130,12 +130,11 @@ app.use("/api/manager", managerRoutes);
 app.use("/api/manager/users", managerUsersRoutes);
 app.use("/api/manager/schedule", managerScheduleRoutes);
 
-
 // --- SPEAKER DASHBOARD ---
 const speakerRoutes = require("./routes/speakerRoutes");
 app.use("/api/speaker", speakerRoutes);
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
@@ -145,13 +144,15 @@ app.get("/api/admin/users", async (req, res) => {
   try {
     const users = await db.User.findAll({
       attributes: ["id", "emri", "mbiemri", "email", "statusi", "user_type_id"],
-      include: [{
-        model: db.UserType,
-        as: "userType",
-        attributes: ["emri"]
-      }],
+      include: [
+        {
+          model: db.UserType,
+          as: "userType",
+          attributes: ["emri"],
+        },
+      ],
       // Optional: fshi SuperAdmin nga lista që të mos mund të editoj veten
-      // where: { user_type_id: { [db.Sequelize.Op.ne]: 1 } } 
+      // where: { user_type_id: { [db.Sequelize.Op.ne]: 1 } }
     });
 
     res.json(users);
@@ -186,4 +187,3 @@ app.put("/api/admin/users/:id/role", async (req, res) => {
     res.status(500).json({ error: "Failed to update user role" });
   }
 });
-
