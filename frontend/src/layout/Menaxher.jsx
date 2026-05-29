@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const sidebarLinks = [
   "Dashboard",
@@ -7,12 +7,6 @@ const sidebarLinks = [
   "Schedule Control",
   "Ticket Management",
   "Reports",
-];
-
-const initialEvents = [
-  { id: "evt-101", name: "Digital Business Summit", date: "May 24, 2026", venue: "Prishtine", status: "Draft" },
-  { id: "evt-102", name: "Design Leaders Conference", date: "Jun 02, 2026", venue: "Tirana", status: "Published" },
-  { id: "evt-103", name: "Startup Networking Night", date: "Jun 18, 2026", venue: "Prizren", status: "Published" },
 ];
 
 const initialUsers = [
@@ -48,16 +42,60 @@ function statusPill(status) {
 
 function ManagerDashboard() {
   const [activePage, setActivePage] = useState("Dashboard");
-  const [events, setEvents] = useState(initialEvents);
+  const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventMessage, setEventMessage] = useState("");
   const [users, setUsers] = useState(initialUsers);
   const [schedule, setSchedule] = useState(initialSchedule);
   const [tickets, setTickets] = useState(initialTickets);
 
-  const [eventForm, setEventForm] = useState({
-    name: "",
-    date: "",
-    venue: "",
+  const emptyEventForm = () => ({
+    titulli: "",
+    pershkrimi: "",
+    data_fillimit: "",
+    data_perfundimit: "",
+    lokacioni: "",
+    kapaciteti: "",
+    statusi: "aktiv",
+    publication_status: "draft",
+    organizer_id: localStorage.getItem("userId") || "",
+    imazhi: "",
+    speaker_id: "",
+    tema: "",
+    ora: "",
   });
+
+  const [eventForm, setEventForm] = useState(emptyEventForm);
+  const [speakers, setSpeakers] = useState([]);
+
+  const loadSpeakers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/manager/speakers");
+      if (!res.ok) throw new Error("Failed");
+      setSpeakers(await res.json());
+    } catch {
+      setEventMessage("Nuk u ngarkuan speakerët.");
+    }
+  }, []);
+
+  const loadEvents = useCallback(async () => {
+    setEventsLoading(true);
+    try {
+      const res = await fetch("/api/manager/events");
+      if (!res.ok) throw new Error("Failed to load events");
+      const data = await res.json();
+      setEvents(data);
+    } catch {
+      setEventMessage("Nuk u ngarkuan eventet nga serveri.");
+    } finally {
+      setEventsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEvents();
+    loadSpeakers();
+  }, [loadEvents, loadSpeakers]);
   const [userForm, setUserForm] = useState({
     name: "",
     role: "Attendee",
@@ -83,20 +121,69 @@ function ManagerDashboard() {
     [events.length, users.length, schedule.length, tickets],
   );
 
-  function createEvent(e) {
+  async function createEvent(e) {
     e.preventDefault();
-    if (!eventForm.name || !eventForm.date || !eventForm.venue) return;
-    setEvents((prev) => [
-      {
-        id: `evt-${Date.now()}`,
-        name: eventForm.name,
-        date: eventForm.date,
-        venue: eventForm.venue,
-        status: "Draft",
-      },
-      ...prev,
-    ]);
-    setEventForm({ name: "", date: "", venue: "" });
+    if (
+      !eventForm.titulli ||
+      !eventForm.data_fillimit ||
+      !eventForm.data_perfundimit ||
+      !eventForm.lokacioni
+    ) {
+      return;
+    }
+    if (eventForm.speaker_id && (!eventForm.tema || !eventForm.ora)) {
+      setEventMessage("Për speaker-in plotëso temën dhe orën.");
+      return;
+    }
+    setEventMessage("");
+    try {
+      const body = {
+        titulli: eventForm.titulli,
+        pershkrimi: eventForm.pershkrimi,
+        data_fillimit: eventForm.data_fillimit,
+        data_perfundimit: eventForm.data_perfundimit,
+        lokacioni: eventForm.lokacioni,
+        kapaciteti:
+          eventForm.kapaciteti !== "" ? Number(eventForm.kapaciteti) : null,
+        statusi: eventForm.statusi,
+        publication_status: eventForm.publication_status,
+        organizer_id:
+          eventForm.organizer_id !== "" ? Number(eventForm.organizer_id) : null,
+        imazhi: eventForm.imazhi,
+      };
+      if (eventForm.speaker_id) {
+        body.speaker_id = Number(eventForm.speaker_id);
+        body.tema = eventForm.tema;
+        body.ora = eventForm.ora;
+      }
+
+      const res = await fetch("/api/manager/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+      setEvents((prev) => [data, ...prev]);
+      setEventForm(emptyEventForm());
+      setEventMessage("Eventi u shtua.");
+    } catch (err) {
+      setEventMessage(err.message || "Nuk u shtua eventi.");
+    }
+  }
+
+  async function toggleEventStatus(eventId) {
+    setEventMessage("");
+    try {
+      const res = await fetch(`/api/manager/events/${eventId}/toggle`, {
+        method: "PATCH",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+      setEvents((prev) => prev.map((x) => (x.id === eventId ? data : x)));
+    } catch (err) {
+      setEventMessage(err.message || "Nuk u ndryshua statusi.");
+    }
   }
 
   function addUser(e) {
@@ -156,26 +243,118 @@ function ManagerDashboard() {
       <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1fr]">
         <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
           <h3 className="m-0 text-xl text-[#f4f7fb]">Create Event</h3>
+          {eventMessage ? (
+            <p className="mt-2 text-[13px] text-[#95a2ba]">{eventMessage}</p>
+          ) : null}
           <form className="mt-4 grid gap-3" onSubmit={createEvent}>
             <input
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
-              placeholder="Event Name"
-              value={eventForm.name}
-              onChange={(e) => setEventForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="Titulli *"
+              value={eventForm.titulli}
+              onChange={(e) => setEventForm((p) => ({ ...p, titulli: e.target.value }))}
+              required
+            />
+            <textarea
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Përshkrimi"
+              rows={3}
+              value={eventForm.pershkrimi}
+              onChange={(e) => setEventForm((p) => ({ ...p, pershkrimi: e.target.value }))}
             />
             <input
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
-              placeholder="Event Date"
-              value={eventForm.date}
-              onChange={(e) => setEventForm((p) => ({ ...p, date: e.target.value }))}
+              type="datetime-local"
+              value={eventForm.data_fillimit}
+              onChange={(e) => setEventForm((p) => ({ ...p, data_fillimit: e.target.value }))}
+              required
             />
             <input
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
-              placeholder="Venue"
-              value={eventForm.venue}
-              onChange={(e) => setEventForm((p) => ({ ...p, venue: e.target.value }))}
+              type="datetime-local"
+              value={eventForm.data_perfundimit}
+              onChange={(e) => setEventForm((p) => ({ ...p, data_perfundimit: e.target.value }))}
+              required
             />
-            <button className="rounded-[10px] bg-[#ff8b0f] px-4 py-2.5 text-sm font-semibold text-[#17120c] hover:bg-[#ff9f1a]">
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Lokacioni *"
+              value={eventForm.lokacioni}
+              onChange={(e) => setEventForm((p) => ({ ...p, lokacioni: e.target.value }))}
+              required
+            />
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              type="number"
+              min={1}
+              placeholder="Kapaciteti"
+              value={eventForm.kapaciteti}
+              onChange={(e) => setEventForm((p) => ({ ...p, kapaciteti: e.target.value }))}
+            />
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              value={eventForm.statusi}
+              onChange={(e) => setEventForm((p) => ({ ...p, statusi: e.target.value }))}
+            >
+              <option value="aktiv">Aktiv</option>
+              <option value="anuluar">Anuluar</option>
+              <option value="perfunduar">Përfunduar</option>
+            </select>
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              value={eventForm.publication_status}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, publication_status: e.target.value }))
+              }
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              type="number"
+              placeholder="Organizer ID"
+              value={eventForm.organizer_id}
+              onChange={(e) => setEventForm((p) => ({ ...p, organizer_id: e.target.value }))}
+            />
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="URL imazhi"
+              value={eventForm.imazhi}
+              onChange={(e) => setEventForm((p) => ({ ...p, imazhi: e.target.value }))}
+            />
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              value={eventForm.speaker_id}
+              onChange={(e) => setEventForm((p) => ({ ...p, speaker_id: e.target.value }))}
+            >
+              <option value="">— Speaker (opsional) —</option>
+              {speakers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            {eventForm.speaker_id ? (
+              <>
+                <input
+                  className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+                  placeholder="Tema e prezantimit *"
+                  value={eventForm.tema}
+                  onChange={(e) => setEventForm((p) => ({ ...p, tema: e.target.value }))}
+                />
+                <input
+                  className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+                  type="time"
+                  value={eventForm.ora}
+                  onChange={(e) => setEventForm((p) => ({ ...p, ora: e.target.value }))}
+                  required
+                />
+              </>
+            ) : null}
+            <button
+              type="submit"
+              className="rounded-[10px] bg-[#ff8b0f] px-4 py-2.5 text-sm font-semibold text-[#17120c] hover:bg-[#ff9f1a]"
+            >
               Add Event
             </button>
           </form>
@@ -183,6 +362,9 @@ function ManagerDashboard() {
 
         <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
           <h3 className="m-0 text-xl text-[#f4f7fb]">Event List</h3>
+          {eventsLoading ? (
+            <p className="mt-4 text-[13px] text-[#95a2ba]">Duke ngarkuar...</p>
+          ) : null}
           <ul className="mt-4 flex list-none flex-col gap-3 p-0">
             {events.map((event) => (
               <li key={event.id} className="flex items-center justify-between rounded-[10px] border border-[#293346] bg-[#161d27] p-3">
@@ -191,21 +373,21 @@ function ManagerDashboard() {
                   <p className="mt-1 text-[12px] text-[#95a2ba]">
                     {event.date} · {event.venue}
                   </p>
+                  {event.speakers?.length > 0 ? (
+                    <p className="mt-1 text-[12px] text-[#7dd3a8]">
+                      🎤{" "}
+                      {event.speakers
+                        .map((s) => `${s.name} (${s.tema}, ${s.ora})`)
+                        .join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(event.status)}`}>{event.status}</span>
                   <button
                     type="button"
                     className="rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2.5 py-1.5 text-[12px] text-[#f3f6fb] hover:bg-white/5"
-                    onClick={() =>
-                      setEvents((prev) =>
-                        prev.map((x) =>
-                          x.id === event.id
-                            ? { ...x, status: x.status === "Draft" ? "Published" : "Draft" }
-                            : x,
-                        ),
-                      )
-                    }
+                    onClick={() => toggleEventStatus(event.id)}
                   >
                     Toggle
                   </button>

@@ -13,7 +13,7 @@ export default function AdminUsersList() {
   ];
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin/users")
+    fetch("/api/admin/users")
       .then((res) => res.json())
       .then((data) => {
         setUsers(data);
@@ -24,7 +24,7 @@ export default function AdminUsersList() {
 
   const handleRoleChange = async (userId, newRoleId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/role`, {
+      const response = await fetch(`/api/admin/users/${userId}/role`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_type_id: newRoleId }),

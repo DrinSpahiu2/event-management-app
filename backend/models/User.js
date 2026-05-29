@@ -8,42 +8,34 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_type_id",
         as: "userType",
       });
+      User.hasMany(models.Event, {
+        foreignKey: "organizer_id",
+        as: "organizedEvents",
+      });
+      User.hasMany(models.Registration, {
+        foreignKey: "user_id",
+        as: "registrations",
+      });
+      User.hasMany(models.Feedback, { foreignKey: "user_id", as: "feedback" });
+      User.hasMany(models.Certificate, { foreignKey: "user_id", as: "certificates" });
+      User.hasMany(models.Notification, { foreignKey: "user_id", as: "notifications" });
     }
   }
   User.init(
     {
-      emri: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      mbiemri: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-      },
-      passwordi: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
+      emri: { type: DataTypes.STRING, allowNull: false },
+      mbiemri: { type: DataTypes.STRING, allowNull: false },
+      email: { type: DataTypes.STRING, allowNull: false, unique: true },
+      passwordi: { type: DataTypes.STRING, allowNull: false },
       telefoni: DataTypes.STRING,
       fotoja: DataTypes.STRING,
-      user_type_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-      },
+      user_type_id: { type: DataTypes.INTEGER, allowNull: false },
       statusi: {
         type: DataTypes.ENUM("aktiv", "inaktiv", "banuar"),
         defaultValue: "aktiv",
       },
     },
-    {
-      sequelize,
-      modelName: "User",
-    },
+    { sequelize, modelName: "User", tableName: "Users" },
   );
   return User;
 };
