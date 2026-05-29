@@ -102,9 +102,11 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      
 
       {/* Global Fallback Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
+
