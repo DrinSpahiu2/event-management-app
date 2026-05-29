@@ -123,7 +123,13 @@ app.post("/api/signin", async (req, res) => {
 
 // --- MANAGER DASHBOARD ---
 const managerRoutes = require("./routes/managerRoutes");
+const managerUsersRoutes = require("./routes/managerUsersRoutes");
+const managerScheduleRoutes = require("./routes/managerScheduleRoutes");
+
 app.use("/api/manager", managerRoutes);
+app.use("/api/manager/users", managerUsersRoutes);
+app.use("/api/manager/schedule", managerScheduleRoutes);
+
 
 // --- SPEAKER DASHBOARD ---
 const speakerRoutes = require("./routes/speakerRoutes");
