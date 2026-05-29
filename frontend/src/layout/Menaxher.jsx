@@ -13,6 +13,7 @@ const sidebarLinks = [
   "User & Role",
   "Schedule Control",
   "Ticket Management",
+  "Feedback",
   "Reports",
 ];
 
@@ -47,6 +48,9 @@ function ManagerDashboard() {
   const [schedule, setSchedule] = useState([]);
 
   const [tickets, setTickets] = useState(initialTickets);
+  const [managerFeedbacks, setManagerFeedbacks] = useState([]);
+  const [feedbacksLoading, setFeedbacksLoading] = useState(false);
+  const [feedbacksError, setFeedbacksError] = useState("");
 
   const emptyEventForm = () => ({
     titulli: "",
@@ -91,9 +95,26 @@ function ManagerDashboard() {
     }
   }, []);
 
+  const loadManagerFeedbacks = useCallback(async () => {
+    setFeedbacksLoading(true);
+    setFeedbacksError("");
+    try {
+      const res = await fetch("/api/manager/feedback");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+      setManagerFeedbacks(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setFeedbacksError(err.message || "Nuk u ngarkuan feedback-et.");
+      setManagerFeedbacks([]);
+    } finally {
+      setFeedbacksLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadEvents();
     loadSpeakers();
+    loadManagerFeedbacks();
     // Load manager users + schedule
     (async () => {
       try {
@@ -107,7 +128,7 @@ function ManagerDashboard() {
         // Keep empty arrays if backend isn't wired yet.
       }
     })();
-  }, [loadEvents, loadSpeakers]);
+  }, [loadEvents, loadSpeakers, loadManagerFeedbacks]);
 
   const [userForm, setUserForm] = useState({
     name: "",
@@ -851,6 +872,65 @@ function ManagerDashboard() {
     );
   }
 
+  function renderFeedback() {
+    return (
+      <section className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+        <div className="mb-3.5 flex items-center justify-between">
+          <h3 className="m-0 text-xl text-[#f4f7fb]">Feedback nga përdoruesit</h3>
+          <button
+            type="button"
+            className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5"
+            onClick={loadManagerFeedbacks}
+          >
+            Rifresko
+          </button>
+        </div>
+
+        {feedbacksError ? (
+          <p className="text-[13px] text-rose-300">{feedbacksError}</p>
+        ) : null}
+
+        <ul className="m-0 flex list-none flex-col gap-3 p-0">
+          {feedbacksLoading ? (
+            <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar feedback-et...</li>
+          ) : null}
+          {!feedbacksLoading && managerFeedbacks.length === 0 ? (
+            <li className="text-[13px] text-[#95a2ba]">Nuk ka feedback ende.</li>
+          ) : null}
+          {managerFeedbacks.map((fb) => (
+            <li
+              key={fb.id}
+              className="rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="m-0 text-[14px] font-medium text-[#f8fbff]">
+                    {fb.eventTitle || "Event"}
+                    {fb.eventLocation ? (
+                      <span className="font-normal text-[#95a2ba]"> · {fb.eventLocation}</span>
+                    ) : null}
+                  </p>
+                  <p className="mt-1 text-[12px] text-[#95a2ba]">
+                    {fb.userName}
+                    {fb.userEmail ? ` · ${fb.userEmail}` : ""}
+                  </p>
+                  <p className="mt-1 text-[13px] text-amber-200/90">
+                    {"★".repeat(fb.rating)}
+                    <span className="text-[#95a2ba]"> ({fb.rating}/5)</span>
+                  </p>
+                  <p className="mt-2 text-[13px] text-[#c5cdd9]">
+                    {fb.comment || "—"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#8f9ab0]">{fb.date}</p>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
+
   function renderReports() {
     const publishedEvents = events.filter((e) => e.status === "Published").length;
     const activeUsers = users.filter((u) => u.status === "Active").length;
@@ -882,6 +962,7 @@ function ManagerDashboard() {
     if (activePage === "User & Role") return renderUserRole();
     if (activePage === "Schedule Control") return renderScheduleControl();
     if (activePage === "Ticket Management") return renderTickets();
+    if (activePage === "Feedback") return renderFeedback();
     if (activePage === "Reports") return renderReports();
     return renderDashboard();
   }
