@@ -46,10 +46,17 @@ app.post("/api/signup", async (req, res) => {
       return res.status(409).json({ error: "Email already registered" });
     }
 
+    const clientType = await db.UserType.findOne({ where: { emri: "Client" } });
+    if (!clientType) {
+      return res.status(503).json({
+        error:
+          "User types nuk janë konfiguruar. Ekzekuto: npx sequelize-cli db:seed:all",
+      });
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(passwordi, 10);
 
-    // Create user with default role (Attendee = 5)
     const newUser = await db.User.create({
       emri,
       mbiemri,
@@ -57,7 +64,7 @@ app.post("/api/signup", async (req, res) => {
       passwordi: hashedPassword,
       telefoni: telefoni || null,
       fotoja: fotoja || null,
-      user_type_id: 5, // Default to Attendee - SuperAdmin will assign actual role
+      user_type_id: clientType.id,
       statusi: "aktiv",
     });
 
@@ -127,12 +134,14 @@ const managerUsersRoutes = require("./routes/managerUsersRoutes");
 const managerScheduleRoutes = require("./routes/managerScheduleRoutes");
 const managerUsersCrudRoutes = require("./routes/managerUsersCrudRoutes");
 const managerEventsRoutes = require("./routes/managerEventsRoutes");
+const managerEventCategoriesRoutes = require("./routes/managerEventCategoriesRoutes");
 
 app.use("/api/manager", managerRoutes);
 app.use("/api/manager/users", managerUsersRoutes);
 app.use("/api/manager/users-crud", managerUsersCrudRoutes);
 app.use("/api/manager/schedule", managerScheduleRoutes);
 app.use("/api/manager/events-crud", managerEventsRoutes);
+app.use("/api/manager/event-categories", managerEventCategoriesRoutes);
 
 
 

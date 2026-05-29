@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ManagerEditModal from "./ManagerEditModal.jsx";
+import ManagerEventCategories from "./ManagerEventCategories.jsx";
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -8,6 +9,7 @@ import { format } from "date-fns";
 const sidebarLinks = [
   "Dashboard",
   "Event Control",
+  "Event Categories",
   "User & Role",
   "Schedule Control",
   "Ticket Management",
@@ -876,6 +878,7 @@ function ManagerDashboard() {
 
   function renderMain() {
     if (activePage === "Event Control") return renderEventControl();
+    if (activePage === "Event Categories") return <ManagerEventCategories />;
     if (activePage === "User & Role") return renderUserRole();
     if (activePage === "Schedule Control") return renderScheduleControl();
     if (activePage === "Ticket Management") return renderTickets();
