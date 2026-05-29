@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
       });
       Event.hasMany(models.Feedback, { foreignKey: "event_id", as: "feedback" });
 
-      Event.hasMany(models.EventSpeaker, { foreignKey: "event_id" });
+      Event.hasMany(models.EventSpeaker, { foreignKey: "event_id", as: "eventSpeakers" });
       Event.belongsToMany(models.Speaker, {
         through: models.EventSpeaker,
         foreignKey: "event_id",
@@ -32,7 +32,6 @@ module.exports = (sequelize, DataTypes) => {
         as: "sponsors",
       });
 
-      Event.belongsTo(models.Venue, { foreignKey: "venue_id", as: "venue" });
       Event.hasMany(models.Certificate, { foreignKey: "event_id", as: "certificates" });
       Event.hasMany(models.Agenda, { foreignKey: "event_id", as: "agenda" });
       Event.hasMany(models.Coupon, { foreignKey: "event_id", as: "coupons" });
@@ -49,7 +48,6 @@ module.exports = (sequelize, DataTypes) => {
       statusi: DataTypes.ENUM("aktiv", "anuluar", "perfunduar"),
       publication_status: DataTypes.ENUM("draft", "published"),
       organizer_id: DataTypes.INTEGER,
-      venue_id: DataTypes.INTEGER,
       imazhi: DataTypes.STRING,
     },
     { sequelize, modelName: "Event", tableName: "Events" },

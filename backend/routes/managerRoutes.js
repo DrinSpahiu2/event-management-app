@@ -6,17 +6,12 @@ const router = express.Router();
 const eventInclude = [
   {
     model: db.EventSpeaker,
-    include: [{ model: db.Speaker }],
+    as: "eventSpeakers",
   },
 ];
 
 function mapSpeakers(row) {
-  return (row.EventSpeakers || []).map((link) => ({
-    id: link.Speaker?.id,
-    name: link.Speaker ? `${link.Speaker.emri} ${link.Speaker.mbiemri}` : "",
-    tema: link.tema,
-    ora: link.ora,
-  }));
+  return [];
 }
 
 function toEvent(row) {
@@ -84,7 +79,6 @@ router.get("/events", async (req, res) => {
   try {
     const rows = await db.Event.findAll({
       order: [["data_fillimit", "DESC"]],
-      include: eventInclude,
     });
     res.json(rows.map(toEvent));
   } catch (err) {
@@ -129,6 +123,8 @@ router.post("/events", async (req, res) => {
       return res.status(400).json({ error: "Datat nuk janë valide" });
     }
 
+    console.log("Creating event with data:", { titulli, data_fillimit: start, data_perfundimit: end, lokacioni, publication_status });
+
     const row = await db.Event.create({
       titulli,
       pershkrimi: pershkrimi || null,
@@ -142,6 +138,7 @@ router.post("/events", async (req, res) => {
       organizer_id: organizer_id || null,
       imazhi: imazhi || null,
     });
+    console.log("Event created:", row.id);
 
     if (speaker_id) {
       const speaker = await db.Speaker.findByPk(speaker_id);
@@ -156,11 +153,11 @@ router.post("/events", async (req, res) => {
       });
     }
 
-    const full = await db.Event.findByPk(row.id, { include: eventInclude });
+    const full = await db.Event.findByPk(row.id);
     res.status(201).json(toEvent(full));
   } catch (err) {
-    console.error("POST /events:", err.message);
-    res.status(500).json({ error: "Nuk u krijua eventi" });
+    console.error("POST /events error:", err.message, err.errors || "");
+    res.status(500).json({ error: "Nuk u krijua eventi: " + err.message });
   }
 });
 
@@ -173,7 +170,7 @@ router.patch("/events/:id/toggle", async (req, res) => {
       row.publication_status === "published" ? "draft" : "published";
     await row.save();
 
-    const full = await db.Event.findByPk(row.id, { include: eventInclude });
+    const full = await db.Event.findByPk(row.id);
     res.json(toEvent(full));
   } catch (err) {
     console.error("PATCH toggle:", err.message);

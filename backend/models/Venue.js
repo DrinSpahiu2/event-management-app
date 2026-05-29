@@ -4,7 +4,7 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Venue extends Model {
     static associate(models) {
-      Venue.hasMany(models.Event, { foreignKey: 'venue_id', as: 'events' });
+      // Association removed - Events table no longer has venue_id column
     }
   }
   Venue.init(
