@@ -1,5 +1,6 @@
 import { useState } from "react";
-import AdminUsersList from "./AdminUsersList.jsx"; // 👈 Import the clean component here
+import AdminUsersList from "./AdminUsersList.jsx"; // 
+import AdminEvents from "./AdminEvents.jsx";
 
 const sidebarLinks = [
   "Dashboard",
@@ -97,7 +98,9 @@ function AdminDashboard() {
 
         {/* 🚀 Dynamic Rendering Area */}
         {activeView === "Users List" ? (
-          <AdminUsersList /> // 👈 Renders your clean separate file component
+          <AdminUsersList />
+        ) : activeView === "Upcoming Event" ? (
+          <AdminEvents />
         ) : activeView === "Dashboard" ? (
           <>
             {/* Your original stats display */}
