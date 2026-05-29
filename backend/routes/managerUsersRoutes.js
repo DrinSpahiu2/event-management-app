@@ -46,6 +46,7 @@ router.get("/", async (req, res) => {
           attributes: ["emri"],
         },
       ],
+      where: undefined,
       order: [["emri", "ASC"]],
     });
 
@@ -66,29 +67,27 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const { name, role } = req.body;
+    const { name, role, email, passwordi, telefoni, fotoja } = req.body;
     if (!name) return res.status(400).json({ error: "name është i detyrueshëm" });
+    if (!email) return res.status(400).json({ error: "email është i detyrueshëm" });
+    if (!passwordi) return res.status(400).json({ error: "passwordi është i detyrueshëm" });
 
-    const [emri, ...rest] = String(name).split(" ");
-    const mbiemri = rest.join(" ") || "";
+    const [emri, ...rest] = String(name).trim().split(" ");
+    const mbiemri = rest.join(" ") || "User";
 
     const userTypeEmri = roleToUserTypeEmri(role);
     const userType = await db.UserType.findOne({ where: { emri: userTypeEmri } });
     if (!userType) return res.status(400).json({ error: "User type nuk u gjet" });
 
-    // We can't create without email/password in your schema.
-    // For UI demo purpose we auto-generate an email and a random password.
-    // This keeps the function working with minimal UI changes.
-    const email = `${emri.toLowerCase()}_${Date.now()}@autogen.local`;
-    const passwordi = "ChangeMe123!";
-
     const user = await db.User.create({
       emri: emri || name,
-      mbiemri: mbiemri || "User",
+      mbiemri,
       email,
+      // NOTE: This project stores passwords as plain text in some places.
+      // If you use bcrypt elsewhere, update this to hash before saving.
       passwordi,
-      telefoni: null,
-      fotoja: null,
+      telefoni: telefoni ?? null,
+      fotoja: fotoja ?? null,
       user_type_id: userType.id,
       statusi: "aktiv",
     });
@@ -105,6 +104,7 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "Nuk u krijua përdoruesi" });
   }
 });
+
 
 router.patch("/:id/status", async (req, res) => {
   try {

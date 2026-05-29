@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import ManagerEditModal from "./ManagerEditModal.jsx";
+
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
@@ -12,17 +14,8 @@ const sidebarLinks = [
   "Reports",
 ];
 
-const initialUsers = [
-  { id: "usr-01", name: "Arta Krasniqi", role: "Speaker", status: "Active" },
-  { id: "usr-02", name: "Leon Berisha", role: "Organizer", status: "Active" },
-  { id: "usr-03", name: "Albin Gashi", role: "Attendee", status: "Suspended" },
-];
+// initialUsers/initialSchedule removed (manager now loads from backend)
 
-const initialSchedule = [
-  { id: "sch-1", event: "Digital Business Summit", slot: "09:00 - 09:45", session: "Opening Keynote", speaker: "Arta Krasniqi" },
-  { id: "sch-2", event: "Digital Business Summit", slot: "10:00 - 10:45", session: "Scaling Event Ops", speaker: "Leon Berisha" },
-  { id: "sch-3", event: "Design Leaders Conference", slot: "13:00 - 13:45", session: "Design Systems Live", speaker: "Nora Deda" },
-];
 
 const initialTickets = [
   { id: "tkt-1", event: "Digital Business Summit", type: "Standard", sold: 380, capacity: 500, status: "Open" },
@@ -117,13 +110,30 @@ function ManagerDashboard() {
   const [userForm, setUserForm] = useState({
     name: "",
     role: "Attendee",
+    email: "",
+    passwordi: "",
+    telefoni: "",
+    fotoja: "",
   });
+
   const [scheduleForm, setScheduleForm] = useState({
     event: "",
     slot: "",
     session: "",
     speaker: "",
   });
+
+  const [eventEditOpen, setEventEditOpen] = useState(false);
+  const [eventEditLoading, setEventEditLoading] = useState(false);
+  const [eventEditMessage, setEventEditMessage] = useState("");
+  const [eventEditValues, setEventEditValues] = useState(null);
+
+  const [userEditOpen, setUserEditOpen] = useState(false);
+  const [userEditLoading, setUserEditLoading] = useState(false);
+  const [userEditMessage, setUserEditMessage] = useState("");
+  const [userEditValues, setUserEditValues] = useState(null);
+
+
 
   const dashboardCards = useMemo(
     () => [
@@ -190,6 +200,9 @@ function ManagerDashboard() {
     }
   }
 
+  const eventCrudEndpoint = (id) => `/api/manager/events-crud/${id}`;
+  const userCrudEndpoint = (id) => `/api/manager/users-crud/${id}`;
+
   async function toggleEventStatus(eventId) {
     setEventMessage("");
     try {
@@ -212,17 +225,123 @@ function ManagerDashboard() {
       const res = await fetch("/api/manager/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: userForm.name, role: userForm.role }),
+        body: JSON.stringify({
+          name: userForm.name,
+          role: userForm.role,
+          email: userForm.email,
+          passwordi: userForm.passwordi,
+          telefoni: userForm.telefoni || null,
+          fotoja: userForm.fotoja || null,
+        }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gabim");
       setUsers((prev) => [data, ...prev]);
-      setUserForm({ name: "", role: "Attendee" });
+      setUserForm({
+        name: "",
+        role: "Attendee",
+        email: "",
+        passwordi: "",
+        telefoni: "",
+        fotoja: "",
+      });
     } catch (err) {
       setEventMessage(err.message || "Nuk u shtua user");
     }
   }
 
+
+  const openEventEdit = (ev) => {
+    setEventEditValues({
+      id: ev.id,
+      titulli: ev.name,
+      pershkrimi: ev.pershkrimi || "",
+      data_fillimit: ev.data_fillimit || "",
+      data_perfundimit: ev.data_perfundimit || "",
+      lokacioni: ev.venue,
+      kapaciteti: ev.kapaciteti || "",
+      statusi: ev.statusi || "aktiv",
+      publication_status: ev.publication_status || "draft",
+    });
+    setEventEditMessage("");
+    setEventEditOpen(true);
+  };
+
+  const saveEventEdit = async (values) => {
+    if (!values?.id) return;
+    setEventEditLoading(true);
+    setEventEditMessage("");
+    try {
+      const res = await fetch(eventCrudEndpoint(values.id), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          titulli: values.titulli,
+          pershkrimi: values.pershkrimi,
+          lokacioni: values.lokacioni,
+          kapaciteti:
+            values.kapaciteti !== "" && values.kapaciteti != null
+              ? Number(values.kapaciteti)
+              : null,
+          statusi: values.statusi,
+          publication_status: values.publication_status,
+          data_fillimit: values.data_fillimit
+            ? new Date(values.data_fillimit)
+            : undefined,
+          data_perfundimit: values.data_perfundimit
+            ? new Date(values.data_perfundimit)
+            : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+      setEvents((prev) => prev.map((x) => (x.id === values.id ? { ...x, ...data } : x)));
+      setEventEditOpen(false);
+    } catch (err) {
+      setEventEditMessage(err.message || "Nuk u përditësua eventi");
+    } finally {
+      setEventEditLoading(false);
+    }
+  };
+
+  const openUserEdit = (u) => {
+    setUserEditValues({
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      status: u.status,
+    });
+    setUserEditMessage("");
+    setUserEditOpen(true);
+  };
+
+  const saveUserEdit = async (values) => {
+    if (!values?.id) return;
+    setUserEditLoading(true);
+    setUserEditMessage("");
+    try {
+      const res = await fetch(userCrudEndpoint(values.id), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: values.email,
+          role: values.role,
+          name: values.name,
+          status: values.status,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+      setUsers((prev) => prev.map((x) => (x.id === values.id ? { ...x, ...data } : x)));
+      setUserEditOpen(false);
+    } catch (err) {
+      setUserEditMessage(err.message || "Nuk u përditësua user");
+    } finally {
+      setUserEditLoading(false);
+    }
+  };
 
   async function addSchedule(e) {
     e.preventDefault();
@@ -454,11 +573,38 @@ function ManagerDashboard() {
                   <span className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(event.status)}`}>{event.status}</span>
                   <button
                     type="button"
-                    className="rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2.5 py-1.5 text-[12px] text-[#f3f6fb] hover:bg-white/5"
+                    className="rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2.5 py-1.5 text-[12px] text-[#f3f6fb] hover:bg-white/5 disabled:opacity-40"
                     onClick={() => toggleEventStatus(event.id)}
+                    disabled={event.status === "Published"}
+                    title={event.status === "Published" ? "Toggle disabled for Published" : undefined}
                   >
                     Toggle
                   </button>
+
+                  <button
+                    type="button"
+                    className="rounded-[8px] border border-amber-400/30 bg-[#11161f] px-2.5 py-1.5 text-[12px] text-amber-100 hover:bg-white/5"
+                    onClick={() => openEventEdit(event)}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    className="rounded-[8px] border border-rose-400/30 bg-[#11161f] px-2.5 py-1.5 text-[12px] text-rose-100 hover:bg-white/5"
+                    onClick={async () => {
+                      const ok = window.confirm("Delete event?" );
+                      if (!ok) return;
+                      const res = await fetch(eventCrudEndpoint(event.id), { method: "DELETE" });
+                      const data = await res.json().catch(() => ({}));
+                      if (!res.ok) throw new Error(data.error || "Gabim");
+                      setEvents((prev) => prev.filter((x) => x.id !== event.id));
+                      setEventMessage("");
+                    }}
+                  >
+                    Delete
+                  </button>
+
                 </div>
               </li>
             ))}
@@ -479,7 +625,9 @@ function ManagerDashboard() {
               placeholder="Full Name"
               value={userForm.name}
               onChange={(e) => setUserForm((p) => ({ ...p, name: e.target.value }))}
+              required
             />
+
             <select
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               value={userForm.role}
@@ -490,10 +638,44 @@ function ManagerDashboard() {
               <option>Organizer</option>
               <option>Manager</option>
             </select>
+
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Email *"
+              value={userForm.email}
+              onChange={(e) => setUserForm((p) => ({ ...p, email: e.target.value }))}
+              type="email"
+              required
+            />
+
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Password *"
+              value={userForm.passwordi}
+              onChange={(e) => setUserForm((p) => ({ ...p, passwordi: e.target.value }))}
+              type="password"
+              required
+            />
+
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Phone (optional)"
+              value={userForm.telefoni}
+              onChange={(e) => setUserForm((p) => ({ ...p, telefoni: e.target.value }))}
+            />
+
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Foto URL (optional)"
+              value={userForm.fotoja}
+              onChange={(e) => setUserForm((p) => ({ ...p, fotoja: e.target.value }))}
+            />
+
             <button className="rounded-[10px] bg-[#ff8b0f] px-4 py-2.5 text-sm font-semibold text-[#17120c] hover:bg-[#ff9f1a]">
               Add User
             </button>
           </form>
+
         </article>
 
         <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
@@ -530,6 +712,35 @@ function ManagerDashboard() {
                   >
                     Toggle
                   </button>
+
+                  <button
+                    type="button"
+                    className="rounded-[8px] border border-amber-400/30 bg-[#11161f] px-2.5 py-1.5 text-[12px] text-amber-100 hover:bg-white/5 disabled:opacity-40"
+                    onClick={() => openUserEdit(user)}
+                    disabled={user.role === "SuperAdmin"}
+                    title={user.role === "SuperAdmin" ? "Managers cannot edit SuperAdmin" : undefined}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    className="rounded-[8px] border border-rose-400/30 bg-[#11161f] px-2.5 py-1.5 text-[12px] text-rose-100 hover:bg-white/5 disabled:opacity-40"
+                    onClick={async () => {
+                      const ok = window.confirm("Delete user?" );
+                      if (!ok) return;
+                      const res = await fetch(userCrudEndpoint(user.id), { method: "DELETE" });
+                      const data = await res.json().catch(() => ({}));
+                      if (!res.ok) throw new Error(data.error || "Gabim");
+                      setUsers((prev) => prev.filter((x) => x.id !== user.id));
+                      setEventMessage("");
+                    }}
+                    disabled={user.role === "SuperAdmin"}
+                    title={user.role === "SuperAdmin" ? "Managers cannot delete SuperAdmin" : undefined}
+                  >
+                    Delete
+                  </button>
+
 
                 </div>
               </li>
@@ -672,6 +883,7 @@ function ManagerDashboard() {
     return renderDashboard();
   }
 
+
   return (
     <div className="min-h-screen grid grid-cols-1 bg-[#10141d] text-slate-100 lg:grid-cols-[250px_1fr]">
       <aside className="flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4">
@@ -724,9 +936,85 @@ function ManagerDashboard() {
         ) : null}
 
         {renderMain()}
+
+        {/* Event Edit Modal */}
+        <ManagerEditModal
+          open={eventEditOpen}
+          title="Edit Event"
+          loading={eventEditLoading}
+          message={eventEditMessage}
+          initialValues={eventEditValues || {}}
+          fields={[
+            { key: "titulli", label: "Title", required: true, placeholder: "Event title" },
+            { key: "pershkrimi", label: "Description", placeholder: "Description", type: "textarea" },
+            { key: "data_fillimit", label: "Start (display)", required: false, placeholder: "YYYY-MM-DD HH:mm" },
+            { key: "data_perfundimit", label: "End (display)", required: false, placeholder: "YYYY-MM-DD HH:mm" },
+            { key: "lokacioni", label: "Venue", required: true, placeholder: "Location" },
+            { key: "kapaciteti", label: "Capacity", required: false, placeholder: "Capacity" },
+            {
+              key: "publication_status",
+              label: "Publication",
+              required: true,
+              type: "select",
+              options: ["draft", "published"],
+            },
+            {
+              key: "statusi",
+              label: "Status",
+              required: true,
+              type: "select",
+              options: ["aktiv", "anuluar", "perfunduar"],
+            },
+          ]}
+          submitLabel="Save Event"
+          onClose={() => {
+            setEventEditOpen(false);
+            setEventEditMessage("");
+          }}
+          onSubmit={(values) => saveEventEdit(values)}
+        />
+
+        {/* User Edit Modal */}
+        <ManagerEditModal
+          open={userEditOpen}
+          title="Edit User"
+          loading={userEditLoading}
+          message={userEditMessage}
+          initialValues={userEditValues || {}}
+          fields={[
+            { key: "name", label: "Full name", required: true, placeholder: "Name" },
+            { key: "email", label: "Email", required: true, placeholder: "Email" },
+            {
+              key: "role",
+              label: "Role",
+              required: true,
+              type: "select",
+              options: [
+                "Attendee",
+                "Speaker",
+                "Organizer",
+                "Manager",
+              ],
+            },
+            {
+              key: "status",
+              label: "Status",
+              required: true,
+              type: "select",
+              options: ["Active", "Suspended"],
+            },
+          ]}
+          submitLabel="Save User"
+          onClose={() => {
+            setUserEditOpen(false);
+            setUserEditMessage("");
+          }}
+          onSubmit={(values) => saveUserEdit(values)}
+        />
       </main>
     </div>
   );
 }
 
 export default ManagerDashboard;
+
