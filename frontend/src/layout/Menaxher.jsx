@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { format } from "date-fns";
 
 const sidebarLinks = [
   "Dashboard",
@@ -52,8 +55,8 @@ function ManagerDashboard() {
   const emptyEventForm = () => ({
     titulli: "",
     pershkrimi: "",
-    data_fillimit: "",
-    data_perfundimit: "",
+    data_fillimit: null,
+    data_perfundimit: null,
     lokacioni: "",
     kapaciteti: "",
     statusi: "aktiv",
@@ -140,8 +143,8 @@ function ManagerDashboard() {
       const body = {
         titulli: eventForm.titulli,
         pershkrimi: eventForm.pershkrimi,
-        data_fillimit: eventForm.data_fillimit,
-        data_perfundimit: eventForm.data_perfundimit,
+        data_fillimit: eventForm.data_fillimit ? format(eventForm.data_fillimit, "yyyy-MM-dd'T'HH:mm:ss") : null,
+        data_perfundimit: eventForm.data_perfundimit ? format(eventForm.data_perfundimit, "yyyy-MM-dd'T'HH:mm:ss") : null,
         lokacioni: eventForm.lokacioni,
         kapaciteti:
           eventForm.kapaciteti !== "" ? Number(eventForm.kapaciteti) : null,
@@ -261,18 +264,22 @@ function ManagerDashboard() {
               value={eventForm.pershkrimi}
               onChange={(e) => setEventForm((p) => ({ ...p, pershkrimi: e.target.value }))}
             />
-            <input
-              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
-              type="datetime-local"
-              value={eventForm.data_fillimit}
-              onChange={(e) => setEventForm((p) => ({ ...p, data_fillimit: e.target.value }))}
+            <DatePicker
+              className="w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholderText="Data e fillimit *"
+              selected={eventForm.data_fillimit}
+              onChange={(date) => setEventForm((p) => ({ ...p, data_fillimit: date }))}
+              showTimeSelect
+              dateFormat="yyyy-MM-dd HH:mm"
               required
             />
-            <input
-              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
-              type="datetime-local"
-              value={eventForm.data_perfundimit}
-              onChange={(e) => setEventForm((p) => ({ ...p, data_perfundimit: e.target.value }))}
+            <DatePicker
+              className="w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholderText="Data e perfundimit *"
+              selected={eventForm.data_perfundimit}
+              onChange={(date) => setEventForm((p) => ({ ...p, data_perfundimit: date }))}
+              showTimeSelect
+              dateFormat="yyyy-MM-dd HH:mm"
               required
             />
             <input
