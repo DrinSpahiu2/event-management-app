@@ -48,8 +48,9 @@ function ManagerDashboard() {
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventMessage, setEventMessage] = useState("");
-  const [users, setUsers] = useState(initialUsers);
-  const [schedule, setSchedule] = useState(initialSchedule);
+  const [users, setUsers] = useState([]);
+  const [schedule, setSchedule] = useState([]);
+
   const [tickets, setTickets] = useState(initialTickets);
 
   const emptyEventForm = () => ({
@@ -98,7 +99,21 @@ function ManagerDashboard() {
   useEffect(() => {
     loadEvents();
     loadSpeakers();
+    // Load manager users + schedule
+    (async () => {
+      try {
+        const [uRes, sRes] = await Promise.all([
+          fetch("/api/manager/users"),
+          fetch("/api/manager/schedule"),
+        ]);
+        if (uRes.ok) setUsers(await uRes.json());
+        if (sRes.ok) setSchedule(await sRes.json());
+      } catch {
+        // Keep empty arrays if backend isn't wired yet.
+      }
+    })();
   }, [loadEvents, loadSpeakers]);
+
   const [userForm, setUserForm] = useState({
     name: "",
     role: "Attendee",
@@ -189,30 +204,76 @@ function ManagerDashboard() {
     }
   }
 
-  function addUser(e) {
+  async function addUser(e) {
     e.preventDefault();
     if (!userForm.name) return;
-    setUsers((prev) => [
-      {
-        id: `usr-${Date.now()}`,
-        name: userForm.name,
-        role: userForm.role,
-        status: "Active",
-      },
-      ...prev,
-    ]);
-    setUserForm({ name: "", role: "Attendee" });
+    setEventMessage("");
+    try {
+      const res = await fetch("/api/manager/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: userForm.name, role: userForm.role }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+      setUsers((prev) => [data, ...prev]);
+      setUserForm({ name: "", role: "Attendee" });
+    } catch (err) {
+      setEventMessage(err.message || "Nuk u shtua user");
+    }
   }
 
-  function addSchedule(e) {
+
+  async function addSchedule(e) {
     e.preventDefault();
-    if (!scheduleForm.event || !scheduleForm.slot || !scheduleForm.session || !scheduleForm.speaker) return;
-    setSchedule((prev) => [
-      { id: `sch-${Date.now()}`, ...scheduleForm },
-      ...prev,
-    ]);
-    setScheduleForm({ event: "", slot: "", session: "", speaker: "" });
+    if (!scheduleForm.event || !scheduleForm.session || !scheduleForm.slot) return;
+    // UI currently doesn't collect exact timestamps; derive from slot string.
+    // Expected slot format is free text, so we do a minimal best-effort:
+    // if slot looks like "HH:mm - HH:mm" use today's date.
+    const today = new Date();
+    const parts = String(scheduleForm.slot).split("-").map((s) => s.trim());
+    const [startStr, endStr] = parts;
+    const parseTime = (v) => {
+      if (!v) return null;
+      const t = v.slice(0, 5);
+      const [hh, mm] = t.split(":").map(Number);
+      if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
+      const d = new Date(today);
+      d.setHours(hh, mm, 0, 0);
+      return d;
+    };
+    const start = parseTime(startStr);
+    const end = parseTime(endStr);
+    if (!start || !end) {
+      setEventMessage("Për agjendë, 'slot' duhet të jetë HH:mm - HH:mm");
+      return;
+    }
+
+    setEventMessage("");
+    try {
+      const res = await fetch("/api/manager/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: scheduleForm.event,
+          session: scheduleForm.session,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+
+      // Reload schedule list from server to reflect DB state
+      const sRes = await fetch("/api/manager/schedule");
+      if (sRes.ok) setSchedule(await sRes.json());
+
+      setScheduleForm({ event: "", slot: "", session: "", speaker: "" });
+    } catch (err) {
+      setEventMessage(err.message || "Nuk u shtua orari");
+    }
   }
+
 
   function renderDashboard() {
     return (
@@ -449,18 +510,27 @@ function ManagerDashboard() {
                   <button
                     type="button"
                     className="rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2.5 py-1.5 text-[12px] text-[#f3f6fb] hover:bg-white/5"
-                    onClick={() =>
-                      setUsers((prev) =>
-                        prev.map((x) =>
-                          x.id === user.id
-                            ? { ...x, status: x.status === "Active" ? "Suspended" : "Active" }
-                            : x,
-                        ),
-                      )
-                    }
+                    onClick={async () => {
+                      const nextStatus = user.status === "Active" ? "Suspended" : "Active";
+                      try {
+                        const res = await fetch(`/api/manager/users/${user.id}/status`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ status: nextStatus }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || "Gabim");
+                        setUsers((prev) =>
+                          prev.map((x) => (x.id === user.id ? { ...x, status: data.status } : x)),
+                        );
+                      } catch (err) {
+                        setEventMessage(err.message || "Nuk u ndryshua statusi");
+                      }
+                    }}
                   >
                     Toggle
                   </button>
+
                 </div>
               </li>
             ))}
