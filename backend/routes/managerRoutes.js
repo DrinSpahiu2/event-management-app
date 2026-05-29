@@ -11,8 +11,21 @@ const eventInclude = [
 ];
 
 function mapSpeakers(row) {
-  return [];
+  const links = row?.eventSpeakers || [];
+  return links
+    .map((link) => {
+      const sp = link.speaker;
+      if (!sp) return null;
+      return {
+        id: String(sp.id),
+        name: `${sp.emri} ${sp.mbiemri}`,
+        tema: link.tema,
+        ora: String(link.ora),
+      };
+    })
+    .filter(Boolean);
 }
+
 
 function toEvent(row) {
   const d = row.data_fillimit ? new Date(row.data_fillimit) : null;
