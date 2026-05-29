@@ -49,6 +49,13 @@ app.post("/api/signup", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(passwordi, 10);
 
+    const defaultUserType = await db.UserType.findOne({ where: { emri: "Client" } });
+    if (!defaultUserType) {
+      return res.status(500).json({
+        error: "Default user role is missing. Run: npx sequelize-cli db:seed:all",
+      });
+    }
+
     const newUser = await db.User.create({
       emri,
       mbiemri,
@@ -56,7 +63,7 @@ app.post("/api/signup", async (req, res) => {
       passwordi: hashedPassword,
       telefoni: telefoni || null,
       fotoja: fotoja || null,
-      user_type_id: 5, // Default to Attendee
+      user_type_id: defaultUserType.id,
       statusi: "aktiv",
     });
 
@@ -183,7 +190,15 @@ app.use("/api/speaker", speakerRoutes);
 
 // New Events CRUD Routes 🚀
 const eventRoutes = require("./routes/eventRoutes");
-app.use("/api/events", eventRoutes); // This opens up http://localhost:5000/api/events
+app.use("/api/events", eventRoutes);
+
+// Feedback (user CRUD)
+const feedbackRoutes = require("./routes/feedbackRoutes");
+app.use("/api/feedback", feedbackRoutes);
+
+// Manager: view all feedback
+const managerFeedbackRoutes = require("./routes/managerFeedbackRoutes");
+app.use("/api/manager/feedback", managerFeedbackRoutes);
 
 
 // --- START SERVER ---
