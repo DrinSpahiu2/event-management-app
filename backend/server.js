@@ -172,3 +172,4 @@ app.put("/api/admin/users/:id/role", async (req, res) => {
     res.status(500).json({ error: "Failed to update user role" });
   }
 });
+
