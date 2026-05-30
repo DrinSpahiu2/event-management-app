@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdminUsersList from "./AdminUsersList.jsx"; // 
 import AdminEvents from "./AdminEvents.jsx";
-
 const sidebarLinks = [
   "Dashboard",
   "Users List",
@@ -13,38 +12,74 @@ const sidebarLinks = [
   "Profile",
 ];
 
-const statCards = [
-  { label: "Total Registration", value: "1250+", icon: "👥" },
-  { label: "Total Speakers", value: "125+", icon: "🎤" },
-  { label: "New Events", value: "35", icon: "📅" },
-  { label: "Total Ticket Sold", value: "2560+", icon: "🎟" },
-];
-
-const scheduleEvents = [
-  {
-    title: "Digital Business Summit - 2026",
-    host: "Andru Hebo",
-    time: "9:00am - 5:00pm",
-    location: "California, CA",
-  },
-  {
-    title: "NASA Space Apps Challenge - 2026",
-    host: "Tom Cruse",
-    time: "10:00am - 3:00pm",
-    location: "San Francisco, CA",
-  },
-  {
-    title: "Product Design Conference - 2026",
-    host: "Linda Shafer",
-    time: "8:00am - 1:00pm",
-    location: "Los Angeles, CA",
-  },
-];
+function formatIncome(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
+}
 
 function AdminDashboard() {
-  // 👈 Add a tracking state to switch content screens
   const [activeView, setActiveView] = useState("Dashboard");
+  const [dashboardStats, setDashboardStats] = useState({
+    futureEventsCount: 0,
+    soldTickets: 0,
+    income: 0,
+    futureEvents: [],
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState("");
 
+  useEffect(() => {
+    loadDashboardStats();
+  }, []);
+
+  async function loadDashboardStats() {
+    setStatsLoading(true);
+    setStatsError("");
+    try {
+      const res = await fetch("/api/dashboard/stats");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+      setDashboardStats(data);
+    } catch (err) {
+      setStatsError(
+        err.message ||
+          "Nuk u lidh me serverin. Nis backend-in (npm run dev në backend).",
+      );
+    } finally {
+      setStatsLoading(false);
+    }
+  }
+
+  const statCards = useMemo(
+    () => [
+      {
+        label: "Future Events",
+        value: statsLoading ? "…" : String(dashboardStats.futureEventsCount ?? 0),
+        icon: "📅",
+      },
+      {
+        label: "Sold Tickets",
+        value: statsLoading ? "…" : String(dashboardStats.soldTickets ?? 0),
+        icon: "🎟",
+      },
+      {
+        label: "Income",
+        value: statsLoading ? "…" : formatIncome(dashboardStats.income),
+        icon: "💰",
+      },
+      {
+        label: "Upcoming Listed",
+        value: statsLoading
+          ? "…"
+          : String(dashboardStats.futureEvents?.length ?? 0),
+        icon: "📋",
+      },
+    ],
+    [dashboardStats, statsLoading],
+  );
   return (
     <div className="min-h-screen grid grid-cols-1 bg-[#10141d] text-slate-100 lg:grid-cols-[250px_1fr]">
       <aside className="flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4">
@@ -103,7 +138,18 @@ function AdminDashboard() {
           <AdminEvents />
         ) : activeView === "Dashboard" ? (
           <>
-            {/* Your original stats display */}
+            {statsError ? (
+              <div className="mb-3 flex flex-wrap items-center gap-3">
+                <p className="m-0 text-sm text-rose-300">{statsError}</p>
+                <button
+                  type="button"
+                  onClick={loadDashboardStats}
+                  className="rounded-md border border-rose-400/30 px-3 py-1.5 text-sm text-rose-100 hover:bg-rose-500/10"
+                >
+                  Rifresko
+                </button>
+              </div>
+            ) : null}
             <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
               {statCards.map((card) => (
                 <article
@@ -157,31 +203,45 @@ function AdminDashboard() {
               <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
                 <div className="mb-3.5 flex items-center justify-between">
                   <h3 className="m-0 text-xl text-[#f4f7fb]">
-                    Schedule Events
+                    Future Events
                   </h3>
+                  <button
+                    type="button"
+                    onClick={loadDashboardStats}
+                    className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5"
+                  >
+                    Rifresko
+                  </button>
                 </div>
                 <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
-                  {scheduleEvents.map((event) => (
+                  {statsLoading ? (
+                    <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar...</li>
+                  ) : null}
+                  {!statsLoading && (dashboardStats.futureEvents?.length ?? 0) === 0 ? (
+                    <li className="text-[13px] text-[#95a2ba]">
+                      Nuk ka evente të ardhshme.
+                    </li>
+                  ) : null}
+                  {(dashboardStats.futureEvents || []).map((event) => (
                     <li
-                      key={event.title}
+                      key={event.id}
                       className="flex items-center gap-2.5 rounded-[10px] border border-[#293346] bg-[#161d27] p-2.5"
                     >
                       <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#ef4360] to-[#f58b63] text-[17px] font-bold text-white">
-                        {event.host[0]}
+                        {event.host?.[0] || "E"}
                       </div>
                       <div>
                         <h4 className="m-0 text-[15px] text-[#f8fbff]">
                           {event.title}
                         </h4>
                         <p className="mt-1 text-[13px] text-[#95a2ba]">
-                          {event.host} · {event.time} · {event.location}
+                          {event.host} · {event.date} · {event.time} · {event.location}
                         </p>
                       </div>
                     </li>
                   ))}
                 </ul>
-              </article>
-            </section>
+              </article>            </section>
           </>
         ) : (
           /* Fallback view for other undeveloped tabs */

@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 const sidebarLinks = [
   "Dashboard",
   "Event List",
-  "Certificates",
   "Upload Materials",
   "Calendar",
   "Statistics",
@@ -37,16 +36,7 @@ function SpeakerDashboard() {
     { name: "Speaker Bio.docx", type: "Docs", updated: "Apr 22, 2026", url: null },
   ]);
   const [materialObjectUrls, setMaterialObjectUrls] = useState([]);
-  const [certificates, setCertificates] = useState([]);
-  const [certificatesLoading, setCertificatesLoading] = useState(true);
-  const [certificatesError, setCertificatesError] = useState("");
-  const [certificateForm, setCertificateForm] = useState({
-    eventId: "",
-    code: "",
-    issuedAt: "",
-  });
-  const [editingCertificateId, setEditingCertificateId] = useState(null);
-
+  
   useEffect(() => {
     return () => {
       materialObjectUrls.forEach((u) => URL.revokeObjectURL(u));
@@ -76,28 +66,6 @@ function SpeakerDashboard() {
       .finally(() => setEventsLoading(false));
   }, []);
 
-  useEffect(() => {
-    const email = localStorage.getItem("userEmail");
-    if (!email) {
-      setCertificatesError("Nuk u gjet email i përdoruesit. Kyçu përsëri.");
-      setCertificatesLoading(false);
-      return;
-    }
-
-    setCertificatesLoading(true);
-    fetch(`/api/speaker/certificates?email=${encodeURIComponent(email)}`)
-      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
-      .then(({ ok, data }) => {
-        if (!ok) throw new Error(data.error || "Gabim");
-        setCertificates(Array.isArray(data) ? data : []);
-        setCertificatesError("");
-      })
-      .catch((err) => {
-        setCertificatesError(err.message || "Nuk u ngarkuan certifikatat.");
-      })
-      .finally(() => setCertificatesLoading(false));
-  }, []);
-
   const acceptedUpcoming = useMemo(
     () => assignedUpcomingEvents.filter((e) => e.assignmentStatus === "Accepted"),
     [assignedUpcomingEvents],
@@ -107,15 +75,6 @@ function SpeakerDashboard() {
     [assignedUpcomingEvents],
   );
 
-  const eligibleCertificateEvents = useMemo(
-    () =>
-      speakerPastEvents.filter(
-        (e) =>
-          e.assignmentStatus === "Accepted" &&
-          !certificates.some((c) => c.eventId === e.id),
-      ),
-    [speakerPastEvents, certificates],
-  );
 
   const statsFromPastEvents = useMemo(() => {
     const totalAttendees = speakerPastEvents.reduce(
@@ -234,108 +193,6 @@ function SpeakerDashboard() {
     }
   }
 
-  function speakerEmail() {
-    return localStorage.getItem("userEmail");
-  }
-
-  async function createCertificate() {
-    const email = speakerEmail();
-    if (!email) {
-      setCertificatesError("Nuk u gjet email i përdoruesit.");
-      return;
-    }
-    if (!certificateForm.eventId) {
-      setCertificatesError("Zgjidh një event të kaluar.");
-      return;
-    }
-    try {
-      const res = await fetch("/api/speaker/certificates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          event_id: Number(certificateForm.eventId),
-          kodi: certificateForm.code.trim() || undefined,
-          data_leshimit: certificateForm.issuedAt || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gabim");
-      setCertificates((prev) => [data, ...prev]);
-      setCertificateForm({ eventId: "", code: "", issuedAt: "" });
-      setCertificatesError("");
-    } catch (err) {
-      setCertificatesError(err.message || "Nuk u krijua certifikata.");
-    }
-  }
-
-  async function updateCertificate(id) {
-    const email = speakerEmail();
-    if (!email) {
-      setCertificatesError("Nuk u gjet email i përdoruesit.");
-      return;
-    }
-    try {
-      const res = await fetch(`/api/speaker/certificates/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          kodi: certificateForm.code.trim() || undefined,
-          data_leshimit: certificateForm.issuedAt || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gabim");
-      setCertificates((prev) => prev.map((c) => (c.id === id ? data : c)));
-      setEditingCertificateId(null);
-      setCertificateForm({ eventId: "", code: "", issuedAt: "" });
-      setCertificatesError("");
-    } catch (err) {
-      setCertificatesError(err.message || "Nuk u përditësua certifikata.");
-    }
-  }
-
-  async function deleteCertificate(id) {
-    const email = speakerEmail();
-    if (!email) {
-      setCertificatesError("Nuk u gjet email i përdoruesit.");
-      return;
-    }
-    try {
-      const res = await fetch(
-        `/api/speaker/certificates/${id}?email=${encodeURIComponent(email)}`,
-        { method: "DELETE" },
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gabim");
-      setCertificates((prev) => prev.filter((c) => c.id !== id));
-      if (editingCertificateId === id) {
-        setEditingCertificateId(null);
-        setCertificateForm({ eventId: "", code: "", issuedAt: "" });
-      }
-      setCertificatesError("");
-    } catch (err) {
-      setCertificatesError(err.message || "Nuk u fshi certifikata.");
-    }
-  }
-
-  function startEditCertificate(cert) {
-    setEditingCertificateId(cert.id);
-    setCertificateForm({
-      eventId: cert.eventId,
-      code: cert.code,
-      issuedAt: cert.issuedAtRaw
-        ? new Date(cert.issuedAtRaw).toISOString().slice(0, 10)
-        : "",
-    });
-  }
-
-  function cancelCertificateEdit() {
-    setEditingCertificateId(null);
-    setCertificateForm({ eventId: "", code: "", issuedAt: "" });
-  }
-
   function renderMain() {
     if (activePage === "Event List") {
       return (
@@ -442,158 +299,6 @@ function SpeakerDashboard() {
                     </p>
                   </div>
                   <Badge tone="success">Completed</Badge>
-                </li>
-              ))}
-            </ul>
-          </article>
-        </section>
-      );
-    }
-
-    if (activePage === "Certificates") {
-      return (
-        <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1.2fr]">
-          <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
-            <div className="mb-3.5 flex items-center justify-between">
-              <h3 className="m-0 text-xl text-[#f4f7fb]">
-                {editingCertificateId ? "Edit Certificate" : "Request Certificate"}
-              </h3>
-              <Badge tone="success">{eligibleCertificateEvents.length} eligible</Badge>
-            </div>
-
-            <div className="rounded-[10px] border border-[#2b3446] bg-[#171d27] p-4">
-              <p className="m-0 text-[13px] text-[#95a2ba]">
-                Merr certifikatë për evente të kaluara ku ke pranuar caktimin si speaker.
-              </p>
-
-              {!editingCertificateId ? (
-                <label className="mt-3 block text-[13px] text-[#b6c0cf]">
-                  Event
-                  <select
-                    className="mt-1.5 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none focus:border-[#3b4760]"
-                    value={certificateForm.eventId}
-                    onChange={(e) =>
-                      setCertificateForm((prev) => ({ ...prev, eventId: e.target.value }))
-                    }
-                  >
-                    <option value="">Zgjidh eventin...</option>
-                    {eligibleCertificateEvents.map((event) => (
-                      <option key={event.id} value={event.id}>
-                        {event.title} · {event.date}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <p className="mt-3 text-[13px] text-[#95a2ba]">
-                  Po përditëson certifikatën për eventin e zgjedhur.
-                </p>
-              )}
-
-              <label className="mt-3 block text-[13px] text-[#b6c0cf]">
-                Kodi (opsional)
-                <input
-                  className="mt-1.5 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none placeholder:text-[#798194] focus:border-[#3b4760]"
-                  type="text"
-                  placeholder="Gjenerohet automatikisht nëse lihet bosh"
-                  value={certificateForm.code}
-                  onChange={(e) =>
-                    setCertificateForm((prev) => ({ ...prev, code: e.target.value }))
-                  }
-                />
-              </label>
-
-              <label className="mt-3 block text-[13px] text-[#b6c0cf]">
-                Data e lëshimit (opsional)
-                <input
-                  className="mt-1.5 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none focus:border-[#3b4760]"
-                  type="date"
-                  value={certificateForm.issuedAt}
-                  onChange={(e) =>
-                    setCertificateForm((prev) => ({ ...prev, issuedAt: e.target.value }))
-                  }
-                />
-              </label>
-
-              {certificatesError ? (
-                <p className="mt-3 text-[13px] text-rose-300">{certificatesError}</p>
-              ) : null}
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  className="rounded-[10px] border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-[13px] text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-60"
-                  type="button"
-                  disabled={!editingCertificateId && !certificateForm.eventId}
-                  onClick={() =>
-                    editingCertificateId
-                      ? updateCertificate(editingCertificateId)
-                      : createCertificate()
-                  }
-                >
-                  {editingCertificateId ? "Save changes" : "Create certificate"}
-                </button>
-                {editingCertificateId ? (
-                  <button
-                    className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5"
-                    type="button"
-                    onClick={cancelCertificateEdit}
-                  >
-                    Cancel
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          </article>
-
-          <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
-            <div className="mb-3.5 flex items-center justify-between">
-              <h3 className="m-0 text-xl text-[#f4f7fb]">Your Certificates</h3>
-              <Badge>{certificates.length} issued</Badge>
-            </div>
-
-            <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
-              {certificatesLoading ? (
-                <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar certifikatat...</li>
-              ) : null}
-              {!certificatesLoading && certificates.length === 0 ? (
-                <li className="text-[13px] text-[#95a2ba]">
-                  Nuk ke certifikata ende. Krijoni një për një event të përfunduar.
-                </li>
-              ) : null}
-              {certificates.map((cert) => (
-                <li
-                  key={cert.id}
-                  className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="m-0 truncate text-[14px] font-medium text-[#f8fbff]">
-                      {cert.eventTitle || "Event"}
-                    </p>
-                    <p className="mt-1 font-mono text-[12px] text-[#7dd3a8]">{cert.code}</p>
-                    <p className="mt-1 text-[12px] text-[#95a2ba]">
-                      Issued {cert.issuedAt}
-                      {cert.eventLocation ? ` · ${cert.eventLocation}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-2">
-                    <Badge tone="success">Verified</Badge>
-                    <div className="flex gap-2">
-                      <button
-                        className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5"
-                        type="button"
-                        onClick={() => startEditCertificate(cert)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="rounded-[10px] border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-[13px] text-rose-100 transition hover:bg-rose-400/15"
-                        type="button"
-                        onClick={() => deleteCertificate(cert.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
                 </li>
               ))}
             </ul>

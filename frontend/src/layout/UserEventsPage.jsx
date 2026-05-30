@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { upcomingEvents } from "./eventsData.js";
+import { certificateApi } from "../api/certificateApi.js";
 
 function UserEventsPage() {
   const navigate = useNavigate();
@@ -17,22 +18,28 @@ function UserEventsPage() {
     rating: "5",
     comment: "",
   });
+  const [myCertificates, setMyCertificates] = useState([]);
+  const [certsLoading, setCertsLoading] = useState(true);
+  const [certsError, setCertsError] = useState("");
 
   useEffect(() => {
     if (!userId) {
       setFeedbackError("Kyçu përsëri për të menaxhuar feedback-un.");
       setFeedbacksLoading(false);
+      setCertsLoading(false);
       return;
     }
 
     setFeedbacksLoading(true);
+    setCertsLoading(true);
     Promise.all([
       fetch(`/api/feedback?userId=${encodeURIComponent(userId)}`).then((r) =>
         r.json().then((d) => ({ ok: r.ok, data: d })),
       ),
       fetch("/api/events").then((r) => r.json().then((d) => ({ ok: r.ok, data: d }))),
+      certificateApi.getByUser(userId).then((data) => ({ ok: true, data })),
     ])
-      .then(([fbRes, evRes]) => {
+      .then(([fbRes, evRes, certRes]) => {
         if (!fbRes.ok) throw new Error(fbRes.data.error || "Gabim në feedback");
         setFeedbacks(Array.isArray(fbRes.data) ? fbRes.data : []);
         if (evRes.ok && Array.isArray(evRes.data)) {
@@ -43,13 +50,43 @@ function UserEventsPage() {
             })),
           );
         }
+        if (certRes.ok) {
+          setMyCertificates(Array.isArray(certRes.data) ? certRes.data : []);
+          setCertsError("");
+        }
         setFeedbackError("");
       })
       .catch((err) => {
         setFeedbackError(err.message || "Nuk u ngarkuan të dhënat.");
+        setCertsError(err.message || "Nuk u ngarkuan certifikatat.");
       })
-      .finally(() => setFeedbacksLoading(false));
+      .finally(() => {
+        setFeedbacksLoading(false);
+        setCertsLoading(false);
+      });
   }, [userId]);
+
+  function downloadCertificate(cert) {
+    const text = [
+      "EVENT EMS — Certificate",
+      "",
+      `Event: ${cert.eventTitle}`,
+      `Code: ${cert.code}`,
+      `Issued: ${cert.issuedAt}`,
+      cert.eventLocation ? `Location: ${cert.eventLocation}` : "",
+      "",
+      `Recipient: ${cert.userName || "Participant"}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${cert.code}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("isLoggedIn");
@@ -239,6 +276,47 @@ function UserEventsPage() {
               </article>
             ))}
           </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-6 pb-10">
+          <h2 className="text-2xl font-semibold">My Certificates</h2>
+          <p className="mt-2 text-sm text-white/60">
+            Certifikatat e lëshuara për ty nga menaxheri — shiko ose shkarko.
+          </p>
+          {certsError ? <p className="mt-2 text-sm text-rose-300">{certsError}</p> : null}
+          <ul className="mt-4 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
+            {certsLoading ? (
+              <li className="text-sm text-white/60">Duke ngarkuar certifikatat...</li>
+            ) : null}
+            {!certsLoading && myCertificates.length === 0 ? (
+              <li className="text-sm text-white/60 col-span-full">
+                Nuk ke certifikata ende. Merr një pasi të përfundosh një event.
+              </li>
+            ) : null}
+            {myCertificates.map((cert) => (
+              <li
+                key={cert.id}
+                className="rounded-xl border border-amber-400/20 bg-gradient-to-br from-amber-500/10 to-[#161d27] p-4"
+              >
+                <p className="text-xs uppercase tracking-wider text-amber-200/80">
+                  Certificate
+                </p>
+                <p className="mt-2 font-semibold">{cert.eventTitle}</p>
+                <p className="mt-1 font-mono text-sm text-emerald-300">{cert.code}</p>
+                <p className="mt-1 text-xs text-white/50">
+                  {cert.issuedAt}
+                  {cert.eventLocation ? ` · ${cert.eventLocation}` : ""}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => downloadCertificate(cert)}
+                  className="mt-3 w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20"
+                >
+                  Download
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className="mx-auto max-w-7xl px-6 pb-14">

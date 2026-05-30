@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ManagerEditModal from "./ManagerEditModal.jsx";
 import ManagerEventCategories from "./ManagerEventCategories.jsx";
+import { certificateApi } from "../api/certificateApi.js";
+import { couponApi } from "../api/couponApi.js";
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -14,6 +16,8 @@ const sidebarLinks = [
   "Schedule Control",
   "Ticket Management",
   "Feedback",
+  "Certificates",
+  "Coupons",
   "Reports",
 ];
 
@@ -53,6 +57,41 @@ function ManagerDashboard() {
   const [managerFeedbacks, setManagerFeedbacks] = useState([]);
   const [feedbacksLoading, setFeedbacksLoading] = useState(false);
   const [feedbacksError, setFeedbacksError] = useState("");
+  const [dashboardStats, setDashboardStats] = useState({
+    futureEventsCount: 0,
+    soldTickets: 0,
+    income: 0,
+    futureEvents: [],
+  });
+  const [dashboardStatsLoading, setDashboardStatsLoading] = useState(true);
+  const [certEventId, setCertEventId] = useState("");
+  const [certEventData, setCertEventData] = useState({
+    totalIssued: 0,
+    certificates: [],
+    eventTitle: "",
+  });
+  const [certsLoading, setCertsLoading] = useState(false);
+  const [certMessage, setCertMessage] = useState("");
+  const [certError, setCertError] = useState("");
+  const [certIssueForm, setCertIssueForm] = useState({
+    user_id: "",
+    event_id: "",
+    kodi: "",
+    data_leshimit: "",
+  });
+  const [coupons, setCoupons] = useState([]);
+  const [couponsLoading, setCouponsLoading] = useState(false);
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [couponFilterEventId, setCouponFilterEventId] = useState("");
+  const [editingCouponId, setEditingCouponId] = useState(null);
+  const [couponForm, setCouponForm] = useState({
+    code: "",
+    discount_type: "percentage",
+    discount_value: "",
+    event_id: "",
+    is_active: true,
+  });
 
   const emptyEventForm = () => ({
     titulli: "",
@@ -128,11 +167,26 @@ function ManagerDashboard() {
     }
   }, []);
 
+  const loadDashboardStats = useCallback(async () => {
+    setDashboardStatsLoading(true);
+    try {
+      const res = await fetch("/api/dashboard/stats");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+      setDashboardStats(data);
+    } catch (err) {
+      setEventMessage(err.message || "Nuk u ngarkuan statistikat e dashboard-it.");
+    } finally {
+      setDashboardStatsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadEvents();
     loadTickets();
     loadSpeakers();
     loadManagerFeedbacks();
+    loadDashboardStats();
     // Load manager users + schedule
     (async () => {
       try {
@@ -146,7 +200,7 @@ function ManagerDashboard() {
         // Keep empty arrays if backend isn't wired yet.
       }
     })();
-  }, [loadEvents, loadTickets, loadSpeakers, loadManagerFeedbacks]);
+  }, [loadEvents, loadTickets, loadSpeakers, loadManagerFeedbacks, loadDashboardStats]);
 
   const [userForm, setUserForm] = useState({
     name: "",
@@ -178,16 +232,38 @@ function ManagerDashboard() {
 
   const dashboardCards = useMemo(
     () => [
-      { label: "Total Events", value: String(events.length), icon: "📅" },
-      { label: "Total Users", value: String(users.length), icon: "👥" },
-      { label: "Schedule Slots", value: String(schedule.length), icon: "🕒" },
       {
-        label: "Total Tickets",
-        value: String(tickets.length),
+        label: "Future Events",
+        value: dashboardStatsLoading
+          ? "…"
+          : String(dashboardStats.futureEventsCount ?? 0),
+        icon: "📅",
+      },
+      {
+        label: "Sold Tickets",
+        value: dashboardStatsLoading
+          ? "…"
+          : String(dashboardStats.soldTickets ?? 0),
         icon: "🎟",
       },
+      {
+        label: "Income",
+        value: dashboardStatsLoading
+          ? "…"
+          : new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            }).format(Number(dashboardStats.income) || 0),
+        icon: "💰",
+      },
+      {
+        label: "Total Events",
+        value: String(events.length),
+        icon: "📋",
+      },
     ],
-    [events.length, users.length, schedule.length, tickets.length],
+    [dashboardStats, dashboardStatsLoading, events.length],
   );
 
   async function createEvent(e) {
@@ -239,6 +315,7 @@ function ManagerDashboard() {
       if (!res.ok) throw new Error(data.error || "Gabim");
       setEvents((prev) => [data, ...prev]);
       await loadTickets();
+      await loadDashboardStats();
       setEventForm(emptyEventForm());
       setEventMessage("Eventi dhe bileta u shtuan.");
     } catch (err) {
@@ -507,6 +584,47 @@ function ManagerDashboard() {
               </span>
             </article>
           ))}
+        </section>
+
+        <section className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <div className="mb-3.5 flex items-center justify-between">
+            <h3 className="m-0 text-xl text-[#f4f7fb]">Upcoming Future Events</h3>
+            <button
+              type="button"
+              className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5"
+              onClick={loadDashboardStats}
+            >
+              Rifresko
+            </button>
+          </div>
+          <ul className="m-0 flex list-none flex-col gap-3 p-0">
+            {dashboardStatsLoading ? (
+              <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar eventet...</li>
+            ) : null}
+            {!dashboardStatsLoading &&
+            (dashboardStats.futureEvents?.length ?? 0) === 0 ? (
+              <li className="text-[13px] text-[#95a2ba]">Nuk ka evente të ardhshme.</li>
+            ) : null}
+            {(dashboardStats.futureEvents || []).map((event) => (
+              <li
+                key={event.id}
+                className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
+              >
+                <div>
+                  <p className="m-0 text-[14px] font-medium text-[#f8fbff]">{event.title}</p>
+                  <p className="mt-1 text-[13px] text-[#95a2ba]">
+                    {event.host} · {event.date} · {event.time}
+                  </p>
+                  <p className="mt-1 text-[12px] text-[#8f9ab0]">{event.location}</p>
+                </div>
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(event.status)}`}
+                >
+                  {event.status}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       </>
     );
@@ -1090,6 +1208,466 @@ function ManagerDashboard() {
     );
   }
 
+  async function loadCertificatesForEvent(eventId) {
+    if (!eventId) {
+      setCertEventData({ totalIssued: 0, certificates: [], eventTitle: "" });
+      return;
+    }
+    setCertsLoading(true);
+    setCertError("");
+    try {
+      const data = await certificateApi.getByEvent(eventId);
+      setCertEventData({
+        totalIssued: data.totalIssued ?? 0,
+        certificates: data.certificates ?? [],
+        eventTitle: data.eventTitle ?? "",
+      });
+    } catch (err) {
+      setCertError(err.message || "Nuk u lexuan certifikatat.");
+      setCertEventData({ totalIssued: 0, certificates: [], eventTitle: "" });
+    } finally {
+      setCertsLoading(false);
+    }
+  }
+
+  async function handleIssueCertificate(e) {
+    e.preventDefault();
+    setCertMessage("");
+    setCertError("");
+    if (!certIssueForm.user_id || !certIssueForm.event_id) {
+      setCertError("Zgjidh përdoruesin dhe eventin.");
+      return;
+    }
+    try {
+      await certificateApi.issue({
+        user_id: Number(certIssueForm.user_id),
+        event_id: Number(certIssueForm.event_id),
+        kodi: certIssueForm.kodi.trim() || undefined,
+        data_leshimit: certIssueForm.data_leshimit || undefined,
+      });
+      setCertMessage("Certifikata u lëshua.");
+      setCertIssueForm((p) => ({ ...p, kodi: "", data_leshimit: "" }));
+      await loadCertificatesForEvent(certIssueForm.event_id);
+    } catch (err) {
+      setCertError(err.message || "Nuk u lëshua certifikata.");
+    }
+  }
+
+  async function handleRevokeCertificate(id) {
+    setCertMessage("");
+    setCertError("");
+    try {
+      await certificateApi.revoke(id);
+      setCertMessage("Certifikata u revokua.");
+      if (certEventId) await loadCertificatesForEvent(certEventId);
+    } catch (err) {
+      setCertError(err.message || "Nuk u revokua certifikata.");
+    }
+  }
+
+  const loadCoupons = useCallback(async () => {
+    setCouponsLoading(true);
+    setCouponError("");
+    try {
+      const data = await couponApi.list();
+      setCoupons(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setCouponError(err.message || "Nuk u lexuan kuponët.");
+      setCoupons([]);
+    } finally {
+      setCouponsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activePage === "Coupons") {
+      loadCoupons();
+    }
+  }, [activePage, loadCoupons]);
+
+  const filteredCoupons = useMemo(() => {
+    if (!couponFilterEventId) return coupons;
+    return coupons.filter(
+      (c) => c.eventId === couponFilterEventId || c.eventId == null,
+    );
+  }, [coupons, couponFilterEventId]);
+
+  function resetCouponForm() {
+    setEditingCouponId(null);
+    setCouponForm({
+      code: "",
+      discount_type: "percentage",
+      discount_value: "",
+      event_id: "",
+      is_active: true,
+    });
+  }
+
+  async function handleSaveCoupon(e) {
+    e.preventDefault();
+    setCouponMessage("");
+    setCouponError("");
+    if (!couponForm.code.trim() || !couponForm.discount_value) {
+      setCouponError("Plotëso kodin dhe vlerën e zbritjes.");
+      return;
+    }
+    try {
+      const body = {
+        code: couponForm.code.trim(),
+        discount_type: couponForm.discount_type,
+        discount_value: Number(couponForm.discount_value),
+        is_active: couponForm.is_active,
+        event_id: couponForm.event_id || null,
+      };
+      if (editingCouponId) {
+        await couponApi.update(editingCouponId, body);
+        setCouponMessage("Kuponi u përditësua.");
+      } else {
+        await couponApi.create(body);
+        setCouponMessage("Kuponi u krijua.");
+      }
+      resetCouponForm();
+      await loadCoupons();
+    } catch (err) {
+      setCouponError(err.message || "Gabim.");
+    }
+  }
+
+  async function handleDeleteCoupon(id) {
+    setCouponMessage("");
+    setCouponError("");
+    try {
+      await couponApi.delete(id);
+      setCouponMessage("Kuponi u fshi.");
+      if (editingCouponId === id) resetCouponForm();
+      await loadCoupons();
+    } catch (err) {
+      setCouponError(err.message || "Nuk u fshi kuponi.");
+    }
+  }
+
+  function startEditCoupon(c) {
+    setEditingCouponId(c.id);
+    setCouponForm({
+      code: c.code,
+      discount_type: c.discountType,
+      discount_value: String(c.discountValue),
+      event_id: c.eventId || "",
+      is_active: c.isActive,
+    });
+    setCouponMessage("");
+  }
+
+  function formatDiscountLabel(c) {
+    if (c.discountType === "percentage") return `${c.discountValue}%`;
+    return `$${c.discountValue}`;
+  }
+
+  function renderCoupons() {
+    return (
+      <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1.2fr]">
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <h3 className="m-0 text-xl text-[#f4f7fb]">
+            {editingCouponId ? "Edit Coupon" : "Create Coupon"}
+          </h3>
+          <p className="mt-2 text-[13px] text-[#95a2ba]">
+            Vetëm menaxheri krijon dhe menaxhon kuponët.
+          </p>
+          <form className="mt-4 grid gap-3" onSubmit={handleSaveCoupon}>
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm uppercase text-slate-100"
+              placeholder="Kodi (p.sh. SUMMER20)"
+              value={couponForm.code}
+              onChange={(e) =>
+                setCouponForm((p) => ({ ...p, code: e.target.value }))
+              }
+              required
+            />
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100"
+              value={couponForm.discount_type}
+              onChange={(e) =>
+                setCouponForm((p) => ({ ...p, discount_type: e.target.value }))
+              }
+            >
+              <option value="percentage">Përqindje (%)</option>
+              <option value="fixed">Shumë fikse ($)</option>
+            </select>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100"
+              placeholder="Vlera e zbritjes"
+              value={couponForm.discount_value}
+              onChange={(e) =>
+                setCouponForm((p) => ({ ...p, discount_value: e.target.value }))
+              }
+              required
+            />
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100"
+              value={couponForm.event_id}
+              onChange={(e) =>
+                setCouponForm((p) => ({ ...p, event_id: e.target.value }))
+              }
+            >
+              <option value="">Të gjitha eventet (global)</option>
+              {events.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.name}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-[13px] text-[#b6c0cf]">
+              <input
+                type="checkbox"
+                checked={couponForm.is_active}
+                onChange={(e) =>
+                  setCouponForm((p) => ({ ...p, is_active: e.target.checked }))
+                }
+              />
+              Aktiv
+            </label>
+            {couponError ? <p className="text-[13px] text-rose-300">{couponError}</p> : null}
+            {couponMessage ? (
+              <p className="text-[13px] text-emerald-300">{couponMessage}</p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="submit"
+                className="rounded-[10px] border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-[13px] text-emerald-100 hover:bg-emerald-400/15"
+              >
+                {editingCouponId ? "Save changes" : "Create coupon"}
+              </button>
+              {editingCouponId ? (
+                <button
+                  type="button"
+                  className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb]"
+                  onClick={resetCouponForm}
+                >
+                  Cancel
+                </button>
+              ) : null}
+            </div>
+          </form>
+        </article>
+
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="m-0 text-xl text-[#f4f7fb]">All Coupons</h3>
+            <button
+              type="button"
+              className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] hover:bg-white/5"
+              onClick={loadCoupons}
+            >
+              Rifresko
+            </button>
+          </div>
+          <select
+            className="mb-3 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100"
+            value={couponFilterEventId}
+            onChange={(e) => setCouponFilterEventId(e.target.value)}
+          >
+            <option value="">Të gjitha</option>
+            {events.map((ev) => (
+              <option key={ev.id} value={ev.id}>
+                {ev.name}
+              </option>
+            ))}
+          </select>
+          <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+            {couponsLoading ? (
+              <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar...</li>
+            ) : null}
+            {!couponsLoading && filteredCoupons.length === 0 ? (
+              <li className="text-[13px] text-[#95a2ba]">Nuk ka kuponë.</li>
+            ) : null}
+            {filteredCoupons.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
+              >
+                <div>
+                  <p className="m-0 font-mono text-[14px] font-medium text-[#7dd3a8]">
+                    {c.code}
+                  </p>
+                  <p className="mt-1 text-[13px] text-[#f8fbff]">
+                    {formatDiscountLabel(c)}
+                    {c.eventTitle ? ` · ${c.eventTitle}` : " · Global"}
+                  </p>
+                  <p className="text-[12px] text-[#95a2ba]">
+                    {c.isActive ? "Active" : "Inactive"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[12px] text-[#f3f6fb]"
+                    onClick={() => startEditCoupon(c)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-[10px] border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-[12px] text-rose-100"
+                    onClick={() => handleDeleteCoupon(c.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </section>
+    );
+  }
+
+  function renderCertificates() {
+    return (
+      <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1.2fr]">
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <h3 className="m-0 text-xl text-[#f4f7fb]">Issue Certificate</h3>
+          <p className="mt-2 text-[13px] text-[#95a2ba]">
+            Vetëm menaxheri mund të lëshojë certifikata për përdoruesit.
+          </p>
+          <form className="mt-4 grid gap-3" onSubmit={handleIssueCertificate}>
+            <label className="text-[13px] text-[#b6c0cf]">
+              Përdoruesi
+              <select
+                className="mt-1.5 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100"
+                value={certIssueForm.user_id}
+                onChange={(e) =>
+                  setCertIssueForm((p) => ({ ...p, user_id: e.target.value }))
+                }
+                required
+              >
+                <option value="">Zgjidh përdoruesin...</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} · {u.email}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-[13px] text-[#b6c0cf]">
+              Eventi
+              <select
+                className="mt-1.5 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100"
+                value={certIssueForm.event_id}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCertIssueForm((p) => ({ ...p, event_id: val }));
+                  setCertEventId(val);
+                  loadCertificatesForEvent(val);
+                }}
+                required
+              >
+                <option value="">Zgjidh eventin...</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100"
+              placeholder="Kodi (opsional, gjenerohet automatikisht)"
+              value={certIssueForm.kodi}
+              onChange={(e) =>
+                setCertIssueForm((p) => ({ ...p, kodi: e.target.value }))
+              }
+            />
+            <input
+              type="date"
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100"
+              value={certIssueForm.data_leshimit}
+              onChange={(e) =>
+                setCertIssueForm((p) => ({ ...p, data_leshimit: e.target.value }))
+              }
+            />
+            {certError ? <p className="text-[13px] text-rose-300">{certError}</p> : null}
+            {certMessage ? (
+              <p className="text-[13px] text-emerald-300">{certMessage}</p>
+            ) : null}
+            <button
+              type="submit"
+              className="rounded-[10px] border border-emerald-400/25 bg-emerald-400/10 px-3 py-2 text-[13px] text-emerald-100 hover:bg-emerald-400/15"
+            >
+              Issue certificate
+            </button>
+          </form>
+        </article>
+
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="m-0 text-xl text-[#f4f7fb]">
+              Event certificates
+              {certEventData.eventTitle ? ` · ${certEventData.eventTitle}` : ""}
+            </h3>
+            <span className="rounded-full border border-[#2b3446] bg-[#11161f] px-2.5 py-1 text-[12px]">
+              {certEventData.totalIssued} issued
+            </span>
+          </div>
+          <label className="mb-3 block text-[13px] text-[#b6c0cf]">
+            Filtro sipas eventit
+            <select
+              className="mt-1.5 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100"
+              value={certEventId}
+              onChange={(e) => {
+                setCertEventId(e.target.value);
+                loadCertificatesForEvent(e.target.value);
+              }}
+            >
+              <option value="">Zgjidh eventin...</option>
+              {events.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+            {certsLoading ? (
+              <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar...</li>
+            ) : null}
+            {!certsLoading && !certEventId ? (
+              <li className="text-[13px] text-[#95a2ba]">Zgjidh një event për listën.</li>
+            ) : null}
+            {!certsLoading &&
+              certEventId &&
+              certEventData.certificates.length === 0 ? (
+              <li className="text-[13px] text-[#95a2ba]">Nuk ka certifikata për këtë event.</li>
+            ) : null}
+            {certEventData.certificates.map((cert) => (
+              <li
+                key={cert.id}
+                className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
+              >
+                <div>
+                  <p className="m-0 font-mono text-[13px] text-[#7dd3a8]">{cert.code}</p>
+                  <p className="mt-1 text-[13px] text-[#f8fbff]">{cert.userName}</p>
+                  <p className="text-[12px] text-[#95a2ba]">
+                    {cert.userEmail} · {cert.issuedAt}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 rounded-[10px] border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-[12px] text-rose-100 hover:bg-rose-400/15"
+                  onClick={() => handleRevokeCertificate(cert.id)}
+                >
+                  Revoke
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </section>
+    );
+  }
+
   function renderReports() {
     const publishedEvents = events.filter((e) => e.status === "Published").length;
     const activeUsers = users.filter((u) => u.status === "Active").length;
@@ -1123,6 +1701,8 @@ function ManagerDashboard() {
     if (activePage === "Schedule Control") return renderScheduleControl();
     if (activePage === "Ticket Management") return renderTickets();
     if (activePage === "Feedback") return renderFeedback();
+    if (activePage === "Certificates") return renderCertificates();
+    if (activePage === "Coupons") return renderCoupons();
     if (activePage === "Reports") return renderReports();
     return renderDashboard();
   }

@@ -211,6 +211,18 @@ app.use("/api/feedback", feedbackRoutes);
 const managerFeedbackRoutes = require("./routes/managerFeedbackRoutes");
 app.use("/api/manager/feedback", managerFeedbackRoutes);
 
+// Dashboard stats (future events, sold tickets, income)
+const dashboardRoutes = require("./routes/dashboardRoutes");
+app.use("/api/dashboard", dashboardRoutes);
+
+// Certificates (manager issue/revoke, event stats, user mine)
+const certificateRoutes = require("./routes/certificateRoutes");
+app.use("/api/certificates", certificateRoutes);
+
+// Coupons (manager CRUD, event list, checkout validate)
+const couponRoutes = require("./routes/couponRoutes");
+app.use("/api/coupons", couponRoutes);
+
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
