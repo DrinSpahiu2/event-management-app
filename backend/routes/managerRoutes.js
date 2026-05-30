@@ -22,10 +22,12 @@ function mapSpeakers(row) {
         name: `${sp.emri} ${sp.mbiemri}`,
         tema: link.tema,
         ora: String(link.ora),
+        assignmentStatus: link.assignment_status || "pending",
       };
     })
     .filter(Boolean);
 }
+
 
 
 function toEvent(row) {
@@ -92,8 +94,23 @@ router.get("/speakers", async (req, res) => {
 router.get("/events", async (req, res) => {
   try {
     const rows = await db.Event.findAll({
+      include: [
+        {
+          model: db.EventSpeaker,
+          as: "eventSpeakers",
+          include: [
+            {
+              model: db.Speaker,
+              as: "speaker",
+              attributes: ["id", "emri", "mbiemri"],
+            },
+          ],
+          attributes: ["id", "tema", "ora", "assignment_status"],
+        },
+      ],
       order: [["data_fillimit", "DESC"]],
     });
+
     res.json(rows.map(toEvent));
   } catch (err) {
     console.error("GET /events:", err.message);
