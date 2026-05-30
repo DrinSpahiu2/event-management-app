@@ -218,4 +218,6 @@ router.patch("/events/:id/toggle", async (req, res) => {
   }
 });
 
+router.use("/sponsorships", require("./managerSponsorshipRoutes"));
+
 module.exports = router;

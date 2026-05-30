@@ -6,7 +6,6 @@ require("dotenv").config();
 const app = express();
 
 // --- MIDDLEWARE CONFIGURATIONS ---
-// Allowed all origins via cors() to match your original configuration
 app.use(cors());
 app.use(express.json());
 
@@ -197,8 +196,11 @@ const speakerCertificatesRoutes = require("./routes/speakerCertificatesRoutes");
 app.use("/api/speaker", speakerRoutes);
 app.use("/api/speaker/certificates", speakerCertificatesRoutes);
 
+// Sponsor Routes
+const sponsorRoutes = require("./routes/sponsorRoutes");
+app.use("/api/sponsor", sponsorRoutes);
 
-// New Events CRUD Routes 🚀
+// New Events CRUD Routes
 const eventRoutes = require("./routes/eventRoutes");
 app.use("/api/events", eventRoutes);
 
@@ -206,7 +208,7 @@ app.use("/api/events", eventRoutes);
 const ticketRoutes = require("./routes/ticketRoutes");
 app.use("/api/tickets", ticketRoutes);
 
-// Feedback (user CRUD)
+// Feedback
 const feedbackRoutes = require("./routes/feedbackRoutes");
 app.use("/api/feedback", feedbackRoutes);
 
@@ -214,20 +216,25 @@ app.use("/api/feedback", feedbackRoutes);
 const managerFeedbackRoutes = require("./routes/managerFeedbackRoutes");
 app.use("/api/manager/feedback", managerFeedbackRoutes);
 
-// Dashboard stats (future events, sold tickets, income)
+// Dashboard stats
 const dashboardRoutes = require("./routes/dashboardRoutes");
 app.use("/api/dashboard", dashboardRoutes);
 
-// Certificates (manager issue/revoke, event stats, user mine)
+// Certificates
 const certificateRoutes = require("./routes/certificateRoutes");
 app.use("/api/certificates", certificateRoutes);
 
-// Coupons (manager CRUD, event list, checkout validate)
+// Coupons
 const couponRoutes = require("./routes/couponRoutes");
 app.use("/api/coupons", couponRoutes);
+
+// Sponsorship Requests (manager)
+const managerSponsorshipRoutes = require("./routes/managerSponsorshipRoutes");
+app.use("/api/manager/sponsorships", managerSponsorshipRoutes);
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+

@@ -14,6 +14,12 @@ module.exports = (sequelize, DataTypes) => {
       event_id: { type: DataTypes.INTEGER, allowNull: false },
       sponsor_id: { type: DataTypes.INTEGER, allowNull: false },
       shuma: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+      niveli_sponsorizimit: DataTypes.STRING,
+      status: {
+        type: DataTypes.ENUM("pending", "accepted", "rejected"),
+        allowNull: false,
+        defaultValue: "pending",
+      },
     },
     { sequelize, modelName: "EventSponsor", tableName: "EventSponsors" },
   );
