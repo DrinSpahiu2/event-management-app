@@ -785,13 +785,30 @@ function ManagerDashboard() {
                   <p className="mt-1 text-[12px] text-[#95a2ba]">
                     {event.date} · {event.venue}
                   </p>
-                  {event.speakers?.length > 0 ? (
-                    <p className="mt-1 text-[12px] text-[#7dd3a8]">
-                      🎤{" "}
-                      {event.speakers
-                        .map((s) => `${s.name} (${s.tema}, ${s.ora})`)
-                        .join(" · ")}
-                    </p>
+{event.speakers?.length > 0 ? (
+                    <div className="mt-1">
+                      {event.speakers.map((s) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between gap-3 text-[12px]"
+                        >
+                          <p className="text-[#7dd3a8]">
+                            🎤 {s.name} ({s.tema}, {s.ora})
+                          </p>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                              s.assignmentStatus === "accepted"
+                                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
+                                : s.assignmentStatus === "declined"
+                                  ? "border-rose-400/25 bg-rose-400/10 text-rose-100"
+                                  : "border-amber-400/25 bg-amber-400/10 text-amber-100"
+                            }`}
+                          >
+                            {String(s.assignmentStatus || "pending")}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">

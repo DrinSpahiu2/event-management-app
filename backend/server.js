@@ -193,7 +193,10 @@ app.use("/api/manager/event-categories", managerEventCategoriesRoutes);
 
 // Speaker Routes
 const speakerRoutes = require("./routes/speakerRoutes");
+const speakerCertificatesRoutes = require("./routes/speakerCertificatesRoutes");
 app.use("/api/speaker", speakerRoutes);
+app.use("/api/speaker/certificates", speakerCertificatesRoutes);
+
 
 // New Events CRUD Routes 🚀
 const eventRoutes = require("./routes/eventRoutes");

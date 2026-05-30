@@ -30,8 +30,10 @@ function mapAssignmentStatus(value) {
 }
 
 function toSpeakerEvent(link) {
-  const ev = link.Event;
+  // With include alias { as: "event" }, sequelize attaches it as link.event
+  const ev = link.event;
   if (!ev) return null;
+
 
   return {
     id: String(ev.id),
@@ -80,18 +82,29 @@ router.get("/events", async (req, res) => {
 
     const links = await db.EventSpeaker.findAll({
       where: { speaker_id: speaker.id },
-      include: [{ model: db.Event }],
-      order: [[db.Event, "data_fillimit", "DESC"]],
+      // IMPORTANT: EventSpeaker -> Event relation uses the alias "event"
+      // in models/EventSpeaker.js, so we must specify `as: "event"` here.
+      include: [{ model: db.Event, as: "event" }],
+      order: [[{ model: db.Event, as: "event" }, "data_fillimit", "DESC"]],
     });
+
 
     const now = new Date();
     const upcoming = [];
     const past = [];
 
-    for (const link of links) {
+  for (const link of links) {
       const item = toSpeakerEvent(link);
       if (!item) continue;
-      if (new Date(link.Event.data_perfundimit) >= now) {
+
+      // Defensive: avoid crashing if link.Event or end date is missing
+      const endRaw = link?.Event?.data_perfundimit;
+      const endDate = endRaw ? new Date(endRaw) : null;
+      const isUpcoming = endDate && !Number.isNaN(endDate.getTime())
+        ? endDate >= now
+        : true;
+
+      if (isUpcoming) {
         upcoming.push(item);
       } else {
         past.push(item);
@@ -99,11 +112,16 @@ router.get("/events", async (req, res) => {
     }
 
     res.json({ upcoming, past });
+
   } catch (err) {
-    console.error("GET /speaker/events:", err.message);
-    res.status(500).json({ error: "Nuk u lexuan eventet e speaker-it" });
+    console.error("GET /speaker/events ERROR:", {
+      message: err.message,
+      stack: err.stack,
+    });
+    res.status(500).json({ error: "Nuk u lexuan eventet e speaker-it", details: err.message });
   }
 });
+
 
 router.patch("/assignments/:id", async (req, res) => {
   try {
@@ -120,7 +138,7 @@ router.patch("/assignments/:id", async (req, res) => {
     }
 
     const link = await db.EventSpeaker.findByPk(Number(req.params.id), {
-      include: [{ model: db.Event }],
+      include: [{ model: db.Event, as: "event" }],
     });
     if (!link || Number(link.speaker_id) !== Number(speaker.id)) {
       return res.status(404).json({ error: "Caktimi nuk u gjet" });
