@@ -144,4 +144,25 @@ function capacityValue(val) {
   return isNaN(num) ? 0 : num;
 }
 
+// ==========================================
+// 5. READ A SINGLE EVENT BY ID (GET)
+// ==========================================
+router.get("/:eventId", async (req, res) => {
+  try {
+    // 🚀 Uses Sequelize to find the event by its primary key
+    const event = await Event.findByPk(req.params.eventId, {
+      include: [{ model: Ticket, as: "tickets" }] // Optional: includes ticket structures if needed on the detail page
+    });
+
+    if (!event) {
+      return res.status(404).json({ message: "Ky event nuk ekziston në databazë." });
+    }
+
+    res.status(200).json(event);
+  } catch (error) {
+    console.error("Gabim gjatë marrjes së detajeve të ngjarjes:", error);
+    res.status(500).json({ message: "Ndodhi një gabim në server." });
+  }
+});
+
 module.exports = router;

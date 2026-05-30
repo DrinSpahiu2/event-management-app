@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { upcomingEvents } from "./eventsData.js";
+import { useNavigate } from "react-router-dom";
+import ClientHeader from "./ClientHeader.jsx";
 
 function UserEventsPage() {
   const navigate = useNavigate();
@@ -8,6 +8,7 @@ function UserEventsPage() {
 
   const [feedbacks, setFeedbacks] = useState([]);
   const [events, setEvents] = useState([]);
+  const [purchasedEventIds, setPurchasedEventIds] = useState([]);
   const [feedbacksLoading, setFeedbacksLoading] = useState(true);
   const [feedbackError, setFeedbackError] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -31,17 +32,19 @@ function UserEventsPage() {
         r.json().then((d) => ({ ok: r.ok, data: d })),
       ),
       fetch("/api/events").then((r) => r.json().then((d) => ({ ok: r.ok, data: d }))),
+      fetch(`/api/registrations/me/event-ids?userId=${encodeURIComponent(userId)}`).then((r) =>
+        r.json().then((d) => ({ ok: r.ok, data: d })),
+      ),
     ])
-      .then(([fbRes, evRes]) => {
+      .then(([fbRes, evRes, regRes]) => {
         if (!fbRes.ok) throw new Error(fbRes.data.error || "Gabim në feedback");
         setFeedbacks(Array.isArray(fbRes.data) ? fbRes.data : []);
+        
         if (evRes.ok && Array.isArray(evRes.data)) {
-          setEvents(
-            evRes.data.map((e) => ({
-              id: String(e.id),
-              title: e.titulli,
-            })),
-          );
+          setEvents(evRes.data);
+        }
+        if (regRes.ok && Array.isArray(regRes.data)) {
+          setPurchasedEventIds(regRes.data.map(Number));
         }
         setFeedbackError("");
       })
@@ -50,14 +53,6 @@ function UserEventsPage() {
       })
       .finally(() => setFeedbacksLoading(false));
   }, [userId]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userRole");
-    navigate("/signin");
-  };
 
   function resetForm() {
     setForm({ eventId: "", rating: "5", comment: "" });
@@ -145,44 +140,7 @@ function UserEventsPage() {
 
   return (
     <div className="min-h-screen bg-[#10141d] text-white">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/30 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-600/90">
-              <span className="font-black">E</span>
-            </div>
-            <div>
-              <div className="text-sm font-semibold tracking-widest text-white/90">
-                EVENT EMS
-              </div>
-              <div className="text-xs text-white/50">Member Area</div>
-            </div>
-          </div>
-
-          <nav className="hidden items-center gap-6 text-sm text-white/70 md:flex">
-            <NavLink className="hover:text-white" to="/">
-              Home
-            </NavLink>
-            <NavLink className="hover:text-white" to="/events">
-              Events
-            </NavLink>
-            <NavLink className="hover:text-white" to="/about">
-              About
-            </NavLink>
-            <NavLink className="hover:text-white" to="/contact">
-              Contact
-            </NavLink>
-          </nav>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
-          >
-            Logout
-          </button>
-        </div>
-      </header>
+      <ClientHeader subtitle="Events" />
 
       <main>
         <section className="relative overflow-hidden border-b border-white/10">
@@ -196,58 +154,76 @@ function UserEventsPage() {
               Welcome back, explore and book upcoming events
             </h1>
             <p className="mt-4 max-w-2xl text-sm text-white/65 sm:text-base">
-              View every upcoming event individually, leave feedback, and secure
-              your tickets in a few clicks.
+              View every upcoming event individually, leave feedback, and secure your tickets in a few clicks.
             </p>
           </div>
         </section>
 
+        {/* 🚀 UPCOMING EVENTS SECTION RUNNING ON LIVE DB DATA */}
         <section className="mx-auto max-w-7xl px-6 py-12">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-2xl font-semibold">Upcoming Events</h2>
-            <p className="text-sm text-white/60">
-              Swipe horizontally and select an event card.
-            </p>
+            <p className="text-sm text-white/60">Swipe horizontally and select an event card.</p>
           </div>
 
           <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2">
-            {upcomingEvents.map((event) => (
-              <article
-                key={event.id}
-                className="min-w-[280px] max-w-[320px] snap-start overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:border-white/20"
-              >
-                <img
-                  src={event.image}
-                  alt={event.title}
-                  className="h-44 w-full object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold">{event.title}</h3>
-                  <p className="mt-2 text-sm text-white/70">{event.date}</p>
-                  <p className="text-sm text-white/70">{event.location}</p>
-                  <p className="mt-2 text-sm text-white/60">
-                    Ticket from ${event.price}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/events/${event.id}`)}
-                    className="mt-4 w-full rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold hover:bg-rose-500"
-                  >
-                    View Event
-                  </button>
-                </div>
-              </article>
-            ))}
+            {events.length > 0 ? (
+              events.map((event) => {
+                const alreadyPurchased = purchasedEventIds.includes(Number(event.id));
+                return (
+                <article
+                  key={event.id}
+                  className="min-w-[280px] max-w-[320px] snap-start overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:border-white/20"
+                >
+                  {/* Fallback pattern graphic or image if database photo field doesn't exist */}
+                  <img
+                    src={event.imazhi || "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=600&q=80"}
+                    alt={event.titulli}
+                    className="h-44 w-full object-cover"
+                  />
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold truncate">{event.titulli}</h3>
+                    <p className="mt-2 text-sm text-white/70">{event.data_fillimit}</p>
+                    <p className="text-sm text-white/70 truncate">{event.lokacioni}</p>
+                    <p className="mt-2 text-sm text-emerald-400 font-medium">
+                      {event.tickets?.length > 0
+                        ? `Nga ${Number(event.tickets[0].cmimi).toFixed(2)} EUR`
+                        : "Kontrollo çmimin"}
+                    </p>
+                    {alreadyPurchased ? (
+                      <p className="mt-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-center text-xs font-medium text-emerald-300">
+                        Bileta e blerë — shiko te My Tickets
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => navigate(alreadyPurchased ? "/my-tickets" : `/events/${event.id}`)}
+                      className={`mt-4 w-full rounded-md px-4 py-2 text-sm font-semibold ${
+                        alreadyPurchased
+                          ? "border border-white/20 bg-white/10 hover:bg-white/15"
+                          : "bg-rose-600 hover:bg-rose-500"
+                      }`}
+                    >
+                      {alreadyPurchased ? "My Tickets" : "View Event"}
+                    </button>
+                  </div>
+                </article>
+                );
+              })
+            ) : (
+              <div className="w-full text-center py-10 text-white/50 border border-dashed border-white/10 rounded-xl">
+                Nuk u gjet asnjë ngjarje e hapur për momentin.
+              </div>
+            )}
           </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-6 pb-14">
           <h2 className="text-2xl font-semibold">Your Feedback</h2>
-          <p className="mt-2 text-sm text-white/60">
-            Shkruaj, shiko, përditëso ose fshi feedback-un tënd për eventet.
-          </p>
+          <p className="mt-2 text-sm text-white/60">Shkruaj, shiko, përditëso ose fshi feedback-un tënd për eventet.</p>
 
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.2fr]">
+            {/* Feedback Input Form Workspace */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
               <h3 className="text-lg font-semibold">
                 {editingId ? "Edit feedback" : "New feedback"}
@@ -266,15 +242,13 @@ function UserEventsPage() {
                     <option value="">Zgjidh eventin...</option>
                     {events.map((ev) => (
                       <option key={ev.id} value={ev.id}>
-                        {ev.title}
+                        {ev.titulli} {/* 👈 Matches DB payload property */}
                       </option>
                     ))}
                   </select>
                 </label>
               ) : (
-                <p className="mt-4 text-sm text-white/60">
-                  Po përditëson feedback-un për eventin e zgjedhur.
-                </p>
+                <p className="mt-4 text-sm text-white/60">Po përditëson feedback-un për eventin e zgjedhur.</p>
               )}
 
               <label className="mt-4 block text-sm text-white/80">
@@ -287,9 +261,7 @@ function UserEventsPage() {
                   }
                 >
                   {[5, 4, 3, 2, 1].map((n) => (
-                    <option key={n} value={String(n)}>
-                      {n} yje
-                    </option>
+                    <option key={n} value={String(n)}>{n} yje</option>
                   ))}
                 </select>
               </label>
@@ -306,25 +278,19 @@ function UserEventsPage() {
                 />
               </label>
 
-              {feedbackError ? (
-                <p className="mt-3 text-sm text-rose-300">{feedbackError}</p>
-              ) : null}
-              {feedbackMessage ? (
-                <p className="mt-3 text-sm text-emerald-300">{feedbackMessage}</p>
-              ) : null}
+              {feedbackError && <p className="mt-3 text-sm text-rose-300">{feedbackError}</p>}
+              {feedbackMessage && <p className="mt-3 text-sm text-emerald-300">{feedbackMessage}</p>}
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
                   disabled={!editingId && !form.eventId}
-                  onClick={() =>
-                    editingId ? updateFeedback(editingId) : createFeedback()
-                  }
+                  onClick={() => editingId ? updateFeedback(editingId) : createFeedback()}
                   className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {editingId ? "Ruaj ndryshimet" : "Shto feedback"}
                 </button>
-                {editingId ? (
+                {editingId && (
                   <button
                     type="button"
                     onClick={resetForm}
@@ -332,39 +298,29 @@ function UserEventsPage() {
                   >
                     Anulo
                   </button>
-                ) : null}
+                )}
               </div>
             </div>
 
+            {/* Render Saved Feedbacks Dynamic Stack */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <h3 className="text-lg font-semibold">
-                Feedback-et e mia ({feedbacks.length})
-              </h3>
+              <h3 className="text-lg font-semibold">Feedback-et e mia ({feedbacks.length})</h3>
 
               <ul className="mt-4 flex list-none flex-col gap-3 p-0">
-                {feedbacksLoading ? (
-                  <li className="text-sm text-white/60">Duke ngarkuar...</li>
-                ) : null}
-                {!feedbacksLoading && feedbacks.length === 0 ? (
-                  <li className="text-sm text-white/60">
-                    Nuk ke feedback ende. Shto një më sipër.
-                  </li>
-                ) : null}
+                {feedbacksLoading && <li className="text-sm text-white/60">Duke ngarkuar...</li>}
+                {!feedbacksLoading && feedbacks.length === 0 && (
+                  <li className="text-sm text-white/60">Nuk ke feedback ende. Shto një më sipër.</li>
+                )}
                 {feedbacks.map((item) => (
-                  <li
-                    key={item.id}
-                    className="rounded-xl border border-white/10 bg-[#161d27] p-4"
-                  >
+                  <li key={item.id} className="rounded-xl border border-white/10 bg-[#161d27] p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{item.eventTitle || "Event"}</p>
                         <p className="mt-1 text-sm text-amber-200/90">
-                          {"★".repeat(item.rating)}
-                          <span className="text-white/50"> ({item.rating}/5)</span>
+                          {"★".repeat(item.vleresimi || item.rating)}
+                          <span className="text-white/50"> ({item.vleresimi || item.rating}/5)</span>
                         </p>
-                        <p className="mt-2 text-sm text-white/70">
-                          {item.comment || "—"}
-                        </p>
+                        <p className="mt-2 text-sm text-white/70">{item.komenti || item.comment || "—"}</p>
                         <p className="mt-1 text-xs text-white/45">{item.date}</p>
                       </div>
                       <div className="flex shrink-0 gap-2">

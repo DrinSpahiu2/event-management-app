@@ -203,6 +203,10 @@ app.use("/api/events", eventRoutes);
 const ticketRoutes = require("./routes/ticketRoutes");
 app.use("/api/tickets", ticketRoutes);
 
+// Registrations (client purchases)
+const registrationRoutes = require("./routes/registrationRoutes");
+app.use("/api/registrations", registrationRoutes);
+
 // Feedback (user CRUD)
 const feedbackRoutes = require("./routes/feedbackRoutes");
 app.use("/api/feedback", feedbackRoutes);

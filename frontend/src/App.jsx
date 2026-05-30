@@ -9,6 +9,7 @@ import Contact from "./pages/Contact.jsx";
 import LandingPage from "./landing/LandingPage.jsx";
 import SignIn from "./signin.jsx";
 import UserEventsPage from "./layout/UserEventsPage.jsx";
+import MyTicketsPage from "./layout/MyTicketsPage.jsx";
 import Menaxher from "./layout/Menaxher.jsx";
 import SpeakerDashboard from "./layout/SpeakerDashboard.jsx";
 
@@ -77,19 +78,27 @@ export default function App() {
         }
       />
 
-      {/* 👥 Client / Attendee Ecosystem */}
+      {/* 👥 Client area */}
       <Route
         path="/events"
         element={
-          <ProtectedRoute allowedRoles={["Client", "SuperAdmin"]}>
+          <ProtectedRoute allowedRoles={["Client"]}>
             <UserEventsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-tickets"
+        element={
+          <ProtectedRoute allowedRoles={["Client"]}>
+            <MyTicketsPage />
           </ProtectedRoute>
         }
       />
       <Route
         path="/events/:eventId"
         element={
-          <ProtectedRoute allowedRoles={["Client", "SuperAdmin"]}>
+          <ProtectedRoute allowedRoles={["Client"]}>
             <EventDetailsPage />
           </ProtectedRoute>
         }
@@ -97,7 +106,7 @@ export default function App() {
       <Route
         path="/events/:eventId/checkout"
         element={
-          <ProtectedRoute allowedRoles={["Client", "SuperAdmin"]}>
+          <ProtectedRoute allowedRoles={["Client"]}>
             <TicketCheckoutPage />
           </ProtectedRoute>
         }

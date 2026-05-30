@@ -1,141 +1,147 @@
-import { useState } from "react";
-import { NavLink, useNavigate, useParams } from "react-router-dom";
-import { upcomingEvents } from "./eventsData.js";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import ClientHeader from "./ClientHeader.jsx";
 
 function EventDetailsPage() {
-  const { eventId } = useParams();
+  const { eventId } = useParams(); // 🚀 Matches ':eventId' from App.jsx exactly!
   const navigate = useNavigate();
-  const [feedback, setFeedback] = useState("");
-  const [message, setMessage] = useState("");
+  
+  const userId = localStorage.getItem("userId");
+  const [event, setEvent] = useState(null);
+  const [alreadyPurchased, setAlreadyPurchased] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const event = upcomingEvents.find((item) => item.id === Number(eventId));
+  useEffect(() => {
+    if (!eventId) return;
+    setLoading(true);
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    navigate("/signin");
-  };
+    const eventPromise = fetch(`/api/events/${eventId}`).then((res) => {
+      if (!res.ok) throw new Error("Eventi nuk u gjet ose dështoi lidhja me serverin.");
+      return res.json();
+    });
 
-  const handleFeedbackSubmit = (submitEvent) => {
-    submitEvent.preventDefault();
+    const purchasePromise =
+      userId
+        ? fetch(
+            `/api/registrations/check?userId=${encodeURIComponent(userId)}&eventId=${encodeURIComponent(eventId)}`,
+          ).then((res) => (res.ok ? res.json() : { purchased: false }))
+        : Promise.resolve({ purchased: false });
 
-    if (!feedback.trim()) {
-      setMessage("Please write feedback before submitting.");
-      return;
-    }
+    Promise.all([eventPromise, purchasePromise])
+      .then(([data, check]) => {
+        setEvent(data);
+        setAlreadyPurchased(Boolean(check.purchased));
+        setError("");
+      })
+      .catch((err) => {
+        console.error("❌ Error fetching event details:", err.message);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }, [eventId, userId]);
 
-    setMessage("Thanks! Your feedback has been submitted.");
-    setFeedback("");
-  };
-
-  if (!event) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-[#10141d] px-6 py-20 text-white">
-        <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-          <h1 className="text-2xl font-semibold">Event not found</h1>
-          <button
-            type="button"
-            onClick={() => navigate("/events")}
-            className="mt-5 rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold hover:bg-rose-500"
-          >
-            Back to Events
-          </button>
-        </div>
+      <div className="min-h-screen bg-[#10141d] flex items-center justify-center text-white">
+        <p className="text-lg animate-pulse">Duke ngarkuar detajet nga databaza...</p>
       </div>
     );
   }
 
+  if (error || !event) {
+    return (
+      <div className="min-h-screen bg-[#10141d] flex flex-col items-center justify-center text-white gap-4">
+        <p className="text-rose-400 font-medium">⚠️ {error || "Eventi nuk ekziston."}</p>
+        <button 
+          onClick={() => navigate("/events")} 
+          className="rounded-md bg-white/10 px-4 py-2 text-sm hover:bg-white/15 transition"
+        >
+          Kthehu tek Eventet
+        </button>
+      </div>
+    );
+  }
+
+  // Extract price safely from your nested eager-loaded Tickets relation model
+  const kaBiletë = event.tickets && event.tickets.length > 0;
+  const cmimiBiletes = kaBiletë ? `${event.tickets[0].cmimi} EUR` : "Falas / Pa Çmim";
+
   return (
     <div className="min-h-screen bg-[#10141d] text-white">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/30 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-600/90">
-              <span className="font-black">E</span>
+      <ClientHeader subtitle="Event Details" />
+
+      <main className="mx-auto max-w-4xl px-6 py-12">
+        <article className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+          {/* Main Banner Image */}
+          <img
+            src={event.imazhi || "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=1200&q=80"}
+            alt={event.titulli}
+            className="h-80 w-full object-cover border-b border-white/10"
+          />
+
+          <div className="p-6 md:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{event.titulli}</h1>
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 border border-rose-500/30 text-rose-400 uppercase">
+                {event.statusi || "aktiv"}
+              </span>
             </div>
-            <div>
-              <div className="text-sm font-semibold tracking-widest text-white/90">
-                EVENT EMS
+
+            {/* Event Meta Specifications */}
+            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-4 border-y border-white/10 py-6 text-sm text-white/80">
+              <div>
+                <p className="text-white/40 uppercase text-xs font-bold tracking-wider">📅 Data</p>
+                <p className="mt-1 text-base font-medium">{event.data_fillimit}</p>
               </div>
-              <div className="text-xs text-white/50">Event Details</div>
+              <div>
+                <p className="text-white/40 uppercase text-xs font-bold tracking-wider">📍 Lokacioni</p>
+                <p className="mt-1 text-base font-medium">{event.lokacioni}</p>
+              </div>
+              <div>
+                <p className="text-white/40 uppercase text-xs font-bold tracking-wider">🎟 Kapaciteti</p>
+                <p className="mt-1 text-base font-medium text-amber-400">{event.kapaciteti} vende</p>
+              </div>
+              <div>
+                <p className="text-white/40 uppercase text-xs font-bold tracking-wider">💳 Çmimi</p>
+                <p className="mt-1 text-base font-medium text-emerald-400 font-semibold">{cmimiBiletes}</p>
+              </div>
+            </div>
+
+            {/* Description Text block */}
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold">Përshkrimi i Eventit</h2>
+              <p className="mt-3 text-sm text-white/70 leading-relaxed whitespace-pre-line">
+                {event.pershkrimi || "Nuk ka asnjë përshkrim të shtuar për këtë ngjarje."}
+              </p>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-end gap-3 sm:flex-row sm:justify-end">
+              {alreadyPurchased ? (
+                <>
+                  <p className="text-sm text-emerald-300 sm:mr-auto">
+                    Ke blerë tashmë biletën për këtë ngjarje.
+                  </p>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-semibold hover:bg-white/15 transition"
+                    onClick={() => navigate("/my-tickets")}
+                  >
+                    Shiko biletat e mia
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-lg bg-rose-600 px-6 py-3 font-semibold text-white hover:bg-rose-500 transition shadow-lg shadow-rose-600/20"
+                  onClick={() => navigate(`/events/${event.id}/checkout`)}
+                >
+                  Bli Biletën Tani
+                </button>
+              )}
             </div>
           </div>
-
-          <nav className="hidden items-center gap-6 text-sm text-white/70 md:flex">
-            <NavLink className="hover:text-white" to="/">
-              Home
-            </NavLink>
-            <NavLink className="hover:text-white" to="/events">
-              Events
-            </NavLink>
-            <NavLink className="hover:text-white" to="/about">
-              About
-            </NavLink>
-            <NavLink className="hover:text-white" to="/contact">
-              Contact
-            </NavLink>
-          </nav>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
-          >
-            Logout
-          </button>
-        </div>
-      </header>
-
-      <main className="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[1.1fr_1fr]">
-        <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-          <img src={event.image} alt={event.title} className="h-64 w-full object-cover" />
-          <div className="p-6">
-            <h1 className="text-3xl font-semibold">{event.title}</h1>
-            <p className="mt-3 text-sm text-white/70">{event.date}</p>
-            <p className="text-sm text-white/70">{event.time}</p>
-            <p className="text-sm text-white/70">{event.location}</p>
-            <p className="mt-4 text-sm leading-relaxed text-white/75">
-              {event.description}
-            </p>
-
-            <div className="mt-6 flex items-center justify-between gap-3">
-              <span className="text-xl font-semibold">Ticket: ${event.price}</span>
-              <button
-                type="button"
-                onClick={() => navigate(`/events/${event.id}/checkout`)}
-                className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold hover:bg-rose-500"
-              >
-                Purchase Ticket
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <h2 className="text-xl font-semibold">Give Feedback</h2>
-          <p className="mt-2 text-sm text-white/65">
-            Share your thoughts or expectations about this event.
-          </p>
-          <form className="mt-4 space-y-3" onSubmit={handleFeedbackSubmit}>
-            <textarea
-              value={feedback}
-              onChange={(changeEvent) => setFeedback(changeEvent.target.value)}
-              placeholder="Write your feedback..."
-              className="min-h-40 w-full rounded-md border border-white/10 bg-[#111925] px-3 py-2 text-sm text-white placeholder:text-white/40 outline-none focus:border-rose-400"
-            />
-            <button
-              type="submit"
-              className="rounded-md border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20"
-            >
-              Submit Feedback
-            </button>
-          </form>
-
-          {message ? (
-            <p className="mt-4 rounded-md border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
-              {message}
-            </p>
-          ) : null}
-        </section>
+        </article>
       </main>
     </div>
   );
