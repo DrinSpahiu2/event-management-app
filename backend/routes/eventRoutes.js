@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { Event } = require("../models"); // Adjust path based on your backend structure
+const db = require("../models");
+const { Event, Ticket } = db;
+const { createDefaultTicketForEvent } = require("../services/ticketService");
 
 // ==========================================
 // 1. READ ALL EVENTS (GET)
@@ -8,7 +10,8 @@ const { Event } = require("../models"); // Adjust path based on your backend str
 router.get("/", async (req, res) => {
   try {
     const events = await Event.findAll({
-      order: [["data_fillimit", "ASC"]] // Organizes list by starting date
+      include: [{ model: Ticket, as: "tickets" }],
+      order: [["data_fillimit", "ASC"]],
     });
     res.status(200).json(events);
   } catch (error) {
@@ -18,7 +21,7 @@ router.get("/", async (req, res) => {
 });
 
 // ==========================================
-// 2. CREATE NEW EVENT (POST)
+// 2. CREATE NEW EVENT (POST) + auto ticket
 // ==========================================
 router.post("/", async (req, res) => {
   try {
@@ -32,7 +35,10 @@ router.post("/", async (req, res) => {
       statusi,
       publication_status,
       organizer_id,
-      venue_id
+      venue_id,
+      cmimi,
+      lloji,
+      sasia_disponueshme,
     } = req.body;
 
     const newEvent = await Event.create({
@@ -45,10 +51,20 @@ router.post("/", async (req, res) => {
       statusi: statusi || "aktiv",
       publication_status: publication_status || "published",
       organizer_id: organizer_id || 4,
-      venue_id: venue_id || null
+      venue_id: venue_id || null,
     });
 
-    res.status(201).json(newEvent);
+    const ticket = await createDefaultTicketForEvent(newEvent, {
+      cmimi,
+      lloji,
+      sasia_disponueshme,
+    });
+
+    const withTickets = await Event.findByPk(newEvent.id, {
+      include: [{ model: Ticket, as: "tickets" }],
+    });
+
+    res.status(201).json(withTickets || { ...newEvent.toJSON(), tickets: [ticket] });
   } catch (error) {
     console.error("Gabim gjatë krijimit të ngjarjes:", error);
     res.status(400).json({ message: "Të dhënat nuk mund të procesoheshin." });
@@ -77,7 +93,7 @@ router.put("/:id", async (req, res) => {
       statusi,
       publication_status,
       organizer_id,
-      venue_id
+      venue_id,
     } = req.body;
 
     await event.update({
@@ -90,10 +106,13 @@ router.put("/:id", async (req, res) => {
       statusi,
       publication_status,
       organizer_id,
-      venue_id: venue_id || null
+      venue_id: venue_id || null,
     });
 
-    res.status(200).json(event);
+    const withTickets = await Event.findByPk(id, {
+      include: [{ model: Ticket, as: "tickets" }],
+    });
+    res.status(200).json(withTickets);
   } catch (error) {
     console.error("Gabim gjatë përditësimit të ngjarjes:", error);
     res.status(400).json({ message: "Përditësimi dështoi." });
@@ -120,7 +139,6 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// Helper function to safely process capacity integers
 function capacityValue(val) {
   const num = parseInt(val, 10);
   return isNaN(num) ? 0 : num;

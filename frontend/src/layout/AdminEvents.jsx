@@ -4,6 +4,13 @@ import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
 import ManagerEditModal from "./ManagerEditModal.jsx";
 
+function formatPrice(value) {
+  if (value == null || value === "") return "—";
+  const num = Number(value);
+  if (Number.isNaN(num)) return "—";
+  return num.toFixed(2);
+}
+
 function statusPill(status) {
   if (status === "published" || status === "Published" || status === "aktiv") {
     return "border-emerald-400/25 bg-emerald-400/10 text-emerald-100";
@@ -25,6 +32,8 @@ const emptyEventForm = () => ({
   publication_status: "published",
   organizer_id: "",
   venue_id: "",
+  lloji: "Standard",
+  cmimi: "",
 });
 
 export default function AdminEvents() {
@@ -37,6 +46,21 @@ export default function AdminEvents() {
   const [editLoading, setEditLoading] = useState(false);
   const [editMessage, setEditMessage] = useState("");
   const [editValues, setEditValues] = useState(null);
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
+
+  const fetchTickets = useCallback(async () => {
+    setTicketsLoading(true);
+    try {
+      const res = await fetch("/api/tickets");
+      if (!res.ok) throw new Error("Failed");
+      setTickets(await res.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTicketsLoading(false);
+    }
+  }, []);
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
@@ -55,7 +79,8 @@ export default function AdminEvents() {
 
   useEffect(() => {
     fetchEvents();
-  }, [fetchEvents]);
+    fetchTickets();
+  }, [fetchEvents, fetchTickets]);
 
   async function createEvent(e) {
     e.preventDefault();
@@ -75,6 +100,10 @@ export default function AdminEvents() {
         publication_status: eventForm.publication_status,
         organizer_id: eventForm.organizer_id !== "" ? Number(eventForm.organizer_id) : 4,
         venue_id: eventForm.venue_id !== "" ? Number(eventForm.venue_id) : null,
+        lloji: eventForm.lloji || "Standard",
+        cmimi: eventForm.cmimi !== "" ? Number(eventForm.cmimi) : 0,
+        sasia_disponueshme:
+          eventForm.kapaciteti !== "" ? Number(eventForm.kapaciteti) : undefined,
       };
 
       const res = await fetch("/api/events", {
@@ -84,9 +113,9 @@ export default function AdminEvents() {
       });
 
       if (!res.ok) throw new Error("Gabim gjatë krijimit të ngjarjes");
-      await fetchEvents();
+      await Promise.all([fetchEvents(), fetchTickets()]);
       setEventForm(emptyEventForm());
-      setMessage("Ngjarja u shtua me sukses.");
+      setMessage("Ngjarja dhe bileta u shtuan me sukses.");
     } catch (err) {
       setMessage(err.message || "Nuk u shtua ngjarja.");
     }
@@ -98,13 +127,15 @@ export default function AdminEvents() {
       const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Fshirja dështoi");
       setEvents((prev) => prev.filter((ev) => ev.id !== id));
-      setMessage("Ngjarja u fshi.");
+      await fetchTickets();
+      setMessage("Ngjarja dhe biletat e saj u fshinë.");
     } catch (err) {
       setMessage(err.message || "Nuk u fshi ngjarja.");
     }
   }
 
   function openEdit(event) {
+    const primaryTicket = event.tickets?.[0];
     setEditValues({
       id: event.id,
       titulli: event.titulli || "",
@@ -117,9 +148,50 @@ export default function AdminEvents() {
       publication_status: event.publication_status || "published",
       organizer_id: event.organizer_id ?? "",
       venue_id: event.venue_id ?? "",
+      ticket_id: primaryTicket?.id ?? null,
+      lloji: primaryTicket?.lloji || "Standard",
+      cmimi: primaryTicket?.cmimi != null ? String(primaryTicket.cmimi) : "",
+      sasia_disponueshme: primaryTicket?.sasia_disponueshme ?? event.kapaciteti ?? "",
     });
     setEditMessage("");
     setEditOpen(true);
+  }
+
+  async function saveTicketFromEdit(values) {
+    const sasia =
+      values.sasia_disponueshme !== "" && values.sasia_disponueshme != null
+        ? Number(values.sasia_disponueshme)
+        : values.kapaciteti !== "" && values.kapaciteti != null
+          ? Number(values.kapaciteti)
+          : 0;
+
+    if (values.ticket_id) {
+      const res = await fetch(`/api/tickets/${values.ticket_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lloji: values.lloji || "Standard",
+          cmimi: Number(values.cmimi),
+          sasia_disponueshme: sasia,
+        }),
+      });
+      if (!res.ok) throw new Error("Bileta nuk u përditësua");
+      return;
+    }
+
+    if (values.cmimi === "" || values.cmimi == null) return;
+
+    const res = await fetch("/api/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_id: values.id,
+        lloji: values.lloji || "Standard",
+        cmimi: Number(values.cmimi),
+        sasia_disponueshme: sasia,
+      }),
+    });
+    if (!res.ok) throw new Error("Bileta nuk u krijua");
   }
 
   async function saveEdit(values) {
@@ -144,13 +216,60 @@ export default function AdminEvents() {
         }),
       });
       if (!res.ok) throw new Error("Përditësimi dështoi");
-      await fetchEvents();
+      await saveTicketFromEdit(values);
+      await Promise.all([fetchEvents(), fetchTickets()]);
       setEditOpen(false);
-      setMessage("Ngjarja u përditësua.");
+      setMessage("Ngjarja dhe bileta u përditësuan.");
     } catch (err) {
       setEditMessage(err.message || "Nuk u përditësua ngjarja.");
     } finally {
       setEditLoading(false);
+    }
+  }
+
+  async function updateTicketQuantity(id, sasia) {
+    try {
+      const res = await fetch(`/api/tickets/${id}/quantity`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sasia_disponueshme: Number(sasia) }),
+      });
+      if (!res.ok) throw new Error("Gabim");
+      await fetchTickets();
+      setMessage("Sasia e biletës u përditësua.");
+    } catch (err) {
+      setMessage(err.message || "Nuk u përditësua sasia.");
+    }
+  }
+
+  async function updateTicketPrice(id, cmimi, ticket) {
+    try {
+      const res = await fetch(`/api/tickets/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lloji: ticket.lloji,
+          cmimi: Number(cmimi),
+          sasia_disponueshme: ticket.sasia_disponueshme,
+        }),
+      });
+      if (!res.ok) throw new Error("Gabim");
+      await fetchTickets();
+      setMessage("Çmimi i biletës u përditësua.");
+    } catch (err) {
+      setMessage(err.message || "Nuk u përditësua çmimi.");
+    }
+  }
+
+  async function deleteTicket(id) {
+    if (!window.confirm("Fshi këtë biletë?")) return;
+    try {
+      const res = await fetch(`/api/tickets/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Gabim");
+      await fetchTickets();
+      setMessage("Bileta u fshi.");
+    } catch (err) {
+      setMessage(err.message || "Nuk u fshi bileta.");
     }
   }
 
@@ -211,9 +330,25 @@ export default function AdminEvents() {
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               type="number"
               min={1}
-              placeholder="Kapaciteti"
+              placeholder="Kapaciteti / sasia e biletave"
               value={eventForm.kapaciteti}
               onChange={(e) => setEventForm((p) => ({ ...p, kapaciteti: e.target.value }))}
+            />
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Lloji i biletës (p.sh. Standard)"
+              value={eventForm.lloji}
+              onChange={(e) => setEventForm((p) => ({ ...p, lloji: e.target.value }))}
+            />
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="Çmimi i biletës *"
+              value={eventForm.cmimi}
+              onChange={(e) => setEventForm((p) => ({ ...p, cmimi: e.target.value }))}
+              required
             />
             <select
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
@@ -277,6 +412,11 @@ export default function AdminEvents() {
                       Kapaciteti: {event.kapaciteti} vendesh
                     </p>
                   ) : null}
+                  {event.tickets?.length > 0 ? (
+                    <p className="mt-1 text-[12px] text-[#ffb86b]">
+                      Bileta: {event.tickets.map((t) => `${t.lloji} — ${formatPrice(t.cmimi)}€ (${t.sasia_disponueshme})`).join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                   <span
@@ -310,6 +450,85 @@ export default function AdminEvents() {
         </article>
       </section>
 
+      <section className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+        <h3 className="m-0 text-xl text-[#f4f7fb]">Menaxhimi i Biletave</h3>
+        <p className="mt-1 text-[13px] text-[#95a2ba]">
+          Biletat krijohen automatikisht kur shtoni një ngjarje. Këtu mund t&apos;i shikoni dhe përditësoni.
+        </p>
+        {ticketsLoading ? (
+          <p className="mt-4 text-[13px] text-[#95a2ba]">Duke ngarkuar biletat...</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto rounded-[10px] border border-[#2b3446] bg-[#161d27]">
+            <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-[#2b3446] bg-[#11161f] text-[#97a2b6]">
+                  <th className="p-3 font-medium">Ngjarja</th>
+                  <th className="p-3 font-medium">Lloji</th>
+                  <th className="p-3 font-medium">Çmimi (€)</th>
+                  <th className="p-3 font-medium">Sasia</th>
+                  <th className="p-3 text-right font-medium">Veprime</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2b3446]">
+                {tickets.map((ticket) => (
+                  <tr key={ticket.id} className="hover:bg-[#1f2633]/40">
+                    <td className="p-3 text-[#f4f7fb]">
+                      {ticket.event_name || `Event #${ticket.event_id}`}
+                    </td>
+                    <td className="p-3 text-[#8f9ab0]">{ticket.lloji}</td>
+                    <td className="p-3">
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        defaultValue={formatPrice(ticket.cmimi)}
+                        className="w-24 rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2 py-1.5 text-[12px] text-slate-100 outline-none"
+                        onBlur={(e) => {
+                          const val = e.target.value;
+                          if (val !== "" && Number(val) !== Number(ticket.cmimi)) {
+                            updateTicketPrice(ticket.id, val, ticket);
+                          }
+                        }}
+                      />
+                    </td>
+                    <td className="p-3">
+                      <input
+                        type="number"
+                        min={0}
+                        defaultValue={ticket.sasia_disponueshme}
+                        className="w-20 rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2 py-1.5 text-[12px] text-slate-100 outline-none"
+                        onBlur={(e) => {
+                          const val = e.target.value;
+                          if (val !== "" && Number(val) !== ticket.sasia_disponueshme) {
+                            updateTicketQuantity(ticket.id, val);
+                          }
+                        }}
+                      />
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        type="button"
+                        className="rounded-[8px] border border-rose-400/30 bg-[#11161f] px-2.5 py-1.5 text-[12px] text-rose-100 hover:bg-white/5"
+                        onClick={() => deleteTicket(ticket.id)}
+                      >
+                        Fshi
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!ticketsLoading && tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-[13px] text-[#95a2ba]">
+                      Nuk ka bileta. Krijoni një ngjarje për të gjeneruar biletën e parë.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <ManagerEditModal
         open={editOpen}
         title="Edit Event"
@@ -322,7 +541,24 @@ export default function AdminEvents() {
           { key: "data_fillimit", label: "Start date", required: true, placeholder: "YYYY-MM-DD" },
           { key: "data_perfundimit", label: "End date", required: true, placeholder: "YYYY-MM-DD" },
           { key: "lokacioni", label: "Venue", required: true, placeholder: "Location" },
-          { key: "kapaciteti", label: "Capacity", placeholder: "Capacity" },
+          { key: "kapaciteti", label: "Capacity", placeholder: "Capacity", type: "number", min: 0 },
+          { key: "lloji", label: "Lloji i biletës", placeholder: "Standard" },
+          {
+            key: "cmimi",
+            label: "Çmimi i biletës (€)",
+            required: true,
+            type: "number",
+            min: 0,
+            step: "0.01",
+            placeholder: "25.00",
+          },
+          {
+            key: "sasia_disponueshme",
+            label: "Sasia e biletave",
+            type: "number",
+            min: 0,
+            placeholder: "Sasia",
+          },
           {
             key: "publication_status",
             label: "Publication",

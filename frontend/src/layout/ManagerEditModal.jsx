@@ -98,6 +98,8 @@ export default function ManagerEditModal({
                       onChange={(e) => setValues((p) => ({ ...p, [f.key]: e.target.value }))}
                       placeholder={f.placeholder}
                       type={f.type || "text"}
+                      min={f.min}
+                      step={f.step}
                     />
                   )}
                 </div>

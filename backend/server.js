@@ -7,7 +7,7 @@ const app = express();
 
 // --- MIDDLEWARE CONFIGURATIONS ---
 // Allowed all origins via cors() to match your original configuration
-app.use(cors()); 
+app.use(cors());
 app.use(express.json());
 
 // --- DATABASE CONNECTION WITH SEQUELIZE ---
@@ -47,29 +47,18 @@ app.post("/api/signup", async (req, res) => {
       return res.status(409).json({ error: "Email already registered" });
     }
 
-<<<<<<< HEAD
-    const clientType = await db.UserType.findOne({ where: { emri: "Client" } });
-    if (!clientType) {
-      return res.status(503).json({
-        error:
-          "User types nuk janë konfiguruar. Ekzekuto: npx sequelize-cli db:seed:all",
-      });
-    }
-
-    // Hash password
     const hashedPassword = await bcrypt.hash(passwordi, 10);
 
-=======
-    const hashedPassword = await bcrypt.hash(passwordi, 10);
-
-    const defaultUserType = await db.UserType.findOne({ where: { emri: "Client" } });
+    const defaultUserType = await db.UserType.findOne({
+      where: { emri: "Client" },
+    });
     if (!defaultUserType) {
       return res.status(500).json({
-        error: "Default user role is missing. Run: npx sequelize-cli db:seed:all",
+        error:
+          "Default user role is missing. Run: npx sequelize-cli db:seed:all",
       });
     }
 
->>>>>>> b98d8e88a92d807bf606d53dedef94d41e7994c0
     const newUser = await db.User.create({
       emri,
       mbiemri,
@@ -77,11 +66,8 @@ app.post("/api/signup", async (req, res) => {
       passwordi: hashedPassword,
       telefoni: telefoni || null,
       fotoja: fotoja || null,
-<<<<<<< HEAD
-      user_type_id: clientType.id,
-=======
+
       user_type_id: defaultUserType.id,
->>>>>>> b98d8e88a92d807bf606d53dedef94d41e7994c0
       statusi: "aktiv",
     });
 
@@ -92,7 +78,9 @@ app.post("/api/signup", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Sign up error:", error.message);
-    res.status(500).json({ error: "Failed to register user: " + error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to register user: " + error.message });
   }
 });
 
@@ -186,7 +174,6 @@ app.put("/api/admin/users/:id/role", async (req, res) => {
   }
 });
 
-
 // --- EXTERNAL ROUTER IMPORTS & ROUTING ---
 
 // Manager Routes
@@ -212,6 +199,10 @@ app.use("/api/speaker", speakerRoutes);
 const eventRoutes = require("./routes/eventRoutes");
 app.use("/api/events", eventRoutes);
 
+// Tickets CRUD
+const ticketRoutes = require("./routes/ticketRoutes");
+app.use("/api/tickets", ticketRoutes);
+
 // Feedback (user CRUD)
 const feedbackRoutes = require("./routes/feedbackRoutes");
 app.use("/api/feedback", feedbackRoutes);
@@ -219,7 +210,6 @@ app.use("/api/feedback", feedbackRoutes);
 // Manager: view all feedback
 const managerFeedbackRoutes = require("./routes/managerFeedbackRoutes");
 app.use("/api/manager/feedback", managerFeedbackRoutes);
-
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;

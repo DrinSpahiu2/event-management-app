@@ -52,5 +52,13 @@ module.exports = (sequelize, DataTypes) => {
     },
     { sequelize, modelName: "Event", tableName: "Events" },
   );
+
+  Event.addHook("beforeDestroy", async (event, options) => {
+    await sequelize.models.Ticket.destroy({
+      where: { event_id: event.id },
+      transaction: options.transaction,
+    });
+  });
+
   return Event;
 };

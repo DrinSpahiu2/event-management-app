@@ -20,11 +20,12 @@ const sidebarLinks = [
 // initialUsers/initialSchedule removed (manager now loads from backend)
 
 
-const initialTickets = [
-  { id: "tkt-1", event: "Digital Business Summit", type: "Standard", sold: 380, capacity: 500, status: "Open" },
-  { id: "tkt-2", event: "Design Leaders Conference", type: "VIP", sold: 72, capacity: 100, status: "Open" },
-  { id: "tkt-3", event: "Startup Networking Night", type: "Early Bird", sold: 140, capacity: 140, status: "Closed" },
-];
+function formatPrice(value) {
+  if (value == null || value === "") return "—";
+  const num = Number(value);
+  if (Number.isNaN(num)) return "—";
+  return num.toFixed(2);
+}
 
 function statusPill(status) {
   if (status === "Published" || status === "Active" || status === "Open") {
@@ -47,7 +48,8 @@ function ManagerDashboard() {
   const [users, setUsers] = useState([]);
   const [schedule, setSchedule] = useState([]);
 
-  const [tickets, setTickets] = useState(initialTickets);
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
   const [managerFeedbacks, setManagerFeedbacks] = useState([]);
   const [feedbacksLoading, setFeedbacksLoading] = useState(false);
   const [feedbacksError, setFeedbacksError] = useState("");
@@ -66,6 +68,8 @@ function ManagerDashboard() {
     speaker_id: "",
     tema: "",
     ora: "",
+    lloji: "Standard",
+    cmimi: "",
   });
 
   const [eventForm, setEventForm] = useState(emptyEventForm);
@@ -78,6 +82,19 @@ function ManagerDashboard() {
       setSpeakers(await res.json());
     } catch {
       setEventMessage("Nuk u ngarkuan speakerët.");
+    }
+  }, []);
+
+  const loadTickets = useCallback(async () => {
+    setTicketsLoading(true);
+    try {
+      const res = await fetch("/api/tickets");
+      if (!res.ok) throw new Error("Failed");
+      setTickets(await res.json());
+    } catch {
+      setEventMessage("Nuk u ngarkuan biletat.");
+    } finally {
+      setTicketsLoading(false);
     }
   }, []);
 
@@ -113,6 +130,7 @@ function ManagerDashboard() {
 
   useEffect(() => {
     loadEvents();
+    loadTickets();
     loadSpeakers();
     loadManagerFeedbacks();
     // Load manager users + schedule
@@ -128,7 +146,7 @@ function ManagerDashboard() {
         // Keep empty arrays if backend isn't wired yet.
       }
     })();
-  }, [loadEvents, loadSpeakers, loadManagerFeedbacks]);
+  }, [loadEvents, loadTickets, loadSpeakers, loadManagerFeedbacks]);
 
   const [userForm, setUserForm] = useState({
     name: "",
@@ -164,12 +182,12 @@ function ManagerDashboard() {
       { label: "Total Users", value: String(users.length), icon: "👥" },
       { label: "Schedule Slots", value: String(schedule.length), icon: "🕒" },
       {
-        label: "Tickets Sold",
-        value: String(tickets.reduce((sum, t) => sum + t.sold, 0)),
+        label: "Total Tickets",
+        value: String(tickets.length),
         icon: "🎟",
       },
     ],
-    [events.length, users.length, schedule.length, tickets],
+    [events.length, users.length, schedule.length, tickets.length],
   );
 
   async function createEvent(e) {
@@ -201,6 +219,10 @@ function ManagerDashboard() {
         organizer_id:
           eventForm.organizer_id !== "" ? Number(eventForm.organizer_id) : null,
         imazhi: eventForm.imazhi,
+        lloji: eventForm.lloji || "Standard",
+        cmimi: eventForm.cmimi !== "" ? Number(eventForm.cmimi) : 0,
+        sasia_disponueshme:
+          eventForm.kapaciteti !== "" ? Number(eventForm.kapaciteti) : undefined,
       };
       if (eventForm.speaker_id) {
         body.speaker_id = Number(eventForm.speaker_id);
@@ -216,8 +238,9 @@ function ManagerDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gabim");
       setEvents((prev) => [data, ...prev]);
+      await loadTickets();
       setEventForm(emptyEventForm());
-      setEventMessage("Eventi u shtua.");
+      setEventMessage("Eventi dhe bileta u shtuan.");
     } catch (err) {
       setEventMessage(err.message || "Nuk u shtua eventi.");
     }
@@ -276,6 +299,7 @@ function ManagerDashboard() {
 
 
   const openEventEdit = (ev) => {
+    const ticket = tickets.find((t) => String(t.event_id) === String(ev.id));
     setEventEditValues({
       id: ev.id,
       titulli: ev.name,
@@ -286,10 +310,51 @@ function ManagerDashboard() {
       kapaciteti: ev.kapaciteti || "",
       statusi: ev.statusi || "aktiv",
       publication_status: ev.publication_status || "draft",
+      ticket_id: ticket?.id ?? null,
+      lloji: ticket?.lloji || "Standard",
+      cmimi: ticket?.cmimi != null ? String(ticket.cmimi) : "",
+      sasia_disponueshme: ticket?.sasia_disponueshme ?? "",
     });
     setEventEditMessage("");
     setEventEditOpen(true);
   };
+
+  async function saveTicketFromEdit(values) {
+    const sasia =
+      values.sasia_disponueshme !== "" && values.sasia_disponueshme != null
+        ? Number(values.sasia_disponueshme)
+        : values.kapaciteti !== "" && values.kapaciteti != null
+          ? Number(values.kapaciteti)
+          : 0;
+
+    if (values.ticket_id) {
+      const res = await fetch(`/api/tickets/${values.ticket_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lloji: values.lloji || "Standard",
+          cmimi: Number(values.cmimi),
+          sasia_disponueshme: sasia,
+        }),
+      });
+      if (!res.ok) throw new Error("Bileta nuk u përditësua");
+      return;
+    }
+
+    if (values.cmimi === "" || values.cmimi == null) return;
+
+    const res = await fetch("/api/tickets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_id: Number(values.id),
+        lloji: values.lloji || "Standard",
+        cmimi: Number(values.cmimi),
+        sasia_disponueshme: sasia,
+      }),
+    });
+    if (!res.ok) throw new Error("Bileta nuk u krijua");
+  }
 
   const saveEventEdit = async (values) => {
     if (!values?.id) return;
@@ -319,8 +384,11 @@ function ManagerDashboard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gabim");
+      await saveTicketFromEdit(values);
+      await loadTickets();
       setEvents((prev) => prev.map((x) => (x.id === values.id ? { ...x, ...data } : x)));
       setEventEditOpen(false);
+      setEventMessage("Eventi dhe bileta u përditësuan.");
     } catch (err) {
       setEventEditMessage(err.message || "Nuk u përditësua eventi");
     } finally {
@@ -496,9 +564,25 @@ function ManagerDashboard() {
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               type="number"
               min={1}
-              placeholder="Kapaciteti"
+              placeholder="Kapaciteti / sasia e biletave"
               value={eventForm.kapaciteti}
               onChange={(e) => setEventForm((p) => ({ ...p, kapaciteti: e.target.value }))}
+            />
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Lloji i biletës"
+              value={eventForm.lloji}
+              onChange={(e) => setEventForm((p) => ({ ...p, lloji: e.target.value }))}
+            />
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="Çmimi i biletës *"
+              value={eventForm.cmimi}
+              onChange={(e) => setEventForm((p) => ({ ...p, cmimi: e.target.value }))}
+              required
             />
             <select
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
@@ -622,7 +706,8 @@ function ManagerDashboard() {
                       const data = await res.json().catch(() => ({}));
                       if (!res.ok) throw new Error(data.error || "Gabim");
                       setEvents((prev) => prev.filter((x) => x.id !== event.id));
-                      setEventMessage("");
+                      await loadTickets();
+                      setEventMessage("Eventi dhe biletat e tij u fshinë.");
                     }}
                   >
                     Delete
@@ -817,57 +902,131 @@ function ManagerDashboard() {
     );
   }
 
+  async function updateTicketQuantity(id, sasia) {
+    try {
+      const res = await fetch(`/api/tickets/${id}/quantity`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sasia_disponueshme: Number(sasia) }),
+      });
+      if (!res.ok) throw new Error("Gabim");
+      await loadTickets();
+      setEventMessage("Sasia e biletës u përditësua.");
+    } catch (err) {
+      setEventMessage(err.message || "Nuk u përditësua sasia.");
+    }
+  }
+
+  async function updateTicketPrice(id, cmimi, ticket) {
+    try {
+      const res = await fetch(`/api/tickets/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lloji: ticket.lloji,
+          cmimi: Number(cmimi),
+          sasia_disponueshme: ticket.sasia_disponueshme,
+        }),
+      });
+      if (!res.ok) throw new Error("Gabim");
+      await loadTickets();
+      setEventMessage("Çmimi i biletës u përditësua.");
+    } catch (err) {
+      setEventMessage(err.message || "Nuk u përditësua çmimi.");
+    }
+  }
+
+  async function deleteTicket(id) {
+    if (!window.confirm("Fshi këtë biletë?")) return;
+    try {
+      const res = await fetch(`/api/tickets/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Gabim");
+      await loadTickets();
+      setEventMessage("Bileta u fshi.");
+    } catch (err) {
+      setEventMessage(err.message || "Nuk u fshi bileta.");
+    }
+  }
+
   function renderTickets() {
     return (
       <section className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
         <h3 className="m-0 text-xl text-[#f4f7fb]">Ticket Management</h3>
-        <ul className="mt-4 flex list-none flex-col gap-3 p-0">
-          {tickets.map((ticket) => (
-            <li key={ticket.id} className="flex flex-col gap-2 rounded-[10px] border border-[#293346] bg-[#161d27] p-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="m-0 text-[14px] text-[#f8fbff]">
-                  {ticket.event} · {ticket.type}
-                </p>
-                <p className="mt-1 text-[12px] text-[#95a2ba]">
-                  Sold: {ticket.sold} / {ticket.capacity}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(ticket.status)}`}>{ticket.status}</span>
-                <button
-                  type="button"
-                  className="rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2.5 py-1.5 text-[12px] text-[#f3f6fb] hover:bg-white/5"
-                  onClick={() =>
-                    setTickets((prev) =>
-                      prev.map((x) =>
-                        x.id === ticket.id
-                          ? { ...x, status: x.status === "Open" ? "Closed" : "Open" }
-                          : x,
-                      ),
-                    )
-                  }
-                >
-                  Toggle
-                </button>
-                <button
-                  type="button"
-                  className="rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2.5 py-1.5 text-[12px] text-[#f3f6fb] hover:bg-white/5"
-                  onClick={() =>
-                    setTickets((prev) =>
-                      prev.map((x) =>
-                        x.id === ticket.id && x.sold < x.capacity
-                          ? { ...x, sold: x.sold + 1 }
-                          : x,
-                      ),
-                    )
-                  }
-                >
-                  + Sale
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <p className="mt-1 text-[13px] text-[#95a2ba]">
+          Shfaq të gjitha biletat nga databaza. Përditëso sasinë ose fshij.
+        </p>
+        {ticketsLoading ? (
+          <p className="mt-4 text-[13px] text-[#95a2ba]">Duke ngarkuar...</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto rounded-[10px] border border-[#2b3446] bg-[#161d27]">
+            <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-[#2b3446] bg-[#11161f] text-[#97a2b6]">
+                  <th className="p-3 font-medium">Event</th>
+                  <th className="p-3 font-medium">Lloji</th>
+                  <th className="p-3 font-medium">Çmimi (€)</th>
+                  <th className="p-3 font-medium">Sasia</th>
+                  <th className="p-3 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2b3446]">
+                {tickets.map((ticket) => (
+                  <tr key={ticket.id} className="hover:bg-[#1f2633]/40">
+                    <td className="p-3 text-[#f4f7fb]">
+                      {ticket.event_name || `Event #${ticket.event_id}`}
+                    </td>
+                    <td className="p-3 text-[#8f9ab0]">{ticket.lloji}</td>
+                    <td className="p-3">
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        defaultValue={formatPrice(ticket.cmimi)}
+                        className="w-24 rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2 py-1.5 text-[12px] text-slate-100 outline-none"
+                        onBlur={(e) => {
+                          const val = e.target.value;
+                          if (val !== "" && Number(val) !== Number(ticket.cmimi)) {
+                            updateTicketPrice(ticket.id, val, ticket);
+                          }
+                        }}
+                      />
+                    </td>
+                    <td className="p-3">
+                      <input
+                        type="number"
+                        min={0}
+                        defaultValue={ticket.sasia_disponueshme}
+                        className="w-20 rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2 py-1.5 text-[12px] text-slate-100 outline-none"
+                        onBlur={(e) => {
+                          const val = e.target.value;
+                          if (val !== "" && Number(val) !== ticket.sasia_disponueshme) {
+                            updateTicketQuantity(ticket.id, val);
+                          }
+                        }}
+                      />
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        type="button"
+                        className="rounded-[8px] border border-rose-400/30 bg-[#11161f] px-2.5 py-1.5 text-[12px] text-rose-100 hover:bg-white/5"
+                        onClick={() => deleteTicket(ticket.id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!ticketsLoading && tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-[13px] text-[#95a2ba]">
+                      Nuk ka bileta. Krijoni një event për të gjeneruar biletën.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     );
   }
@@ -934,17 +1093,18 @@ function ManagerDashboard() {
   function renderReports() {
     const publishedEvents = events.filter((e) => e.status === "Published").length;
     const activeUsers = users.filter((u) => u.status === "Active").length;
-    const soldTotal = tickets.reduce((sum, t) => sum + t.sold, 0);
-    const capacityTotal = tickets.reduce((sum, t) => sum + t.capacity, 0);
-    const occupancy = capacityTotal === 0 ? 0 : Math.round((soldTotal / capacityTotal) * 100);
+    const totalTicketQty = tickets.reduce(
+      (sum, t) => sum + (t.sasia_disponueshme || 0),
+      0,
+    );
 
     return (
       <section className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Published Events", value: String(publishedEvents), icon: "✅" },
           { label: "Active Users", value: String(activeUsers), icon: "🧑‍💼" },
-          { label: "Tickets Sold", value: String(soldTotal), icon: "🎟" },
-          { label: "Occupancy", value: `${occupancy}%`, icon: "📈" },
+          { label: "Total Tickets", value: String(tickets.length), icon: "🎟" },
+          { label: "Available Seats", value: String(totalTicketQty), icon: "📈" },
         ].map((card) => (
           <article key={card.label} className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
             <p className="m-0 text-sm text-[#9ca6b7]">{card.label}</p>
@@ -1034,7 +1194,24 @@ function ManagerDashboard() {
             { key: "data_fillimit", label: "Start (display)", required: false, placeholder: "YYYY-MM-DD HH:mm" },
             { key: "data_perfundimit", label: "End (display)", required: false, placeholder: "YYYY-MM-DD HH:mm" },
             { key: "lokacioni", label: "Venue", required: true, placeholder: "Location" },
-            { key: "kapaciteti", label: "Capacity", required: false, placeholder: "Capacity" },
+            { key: "kapaciteti", label: "Capacity", required: false, placeholder: "Capacity", type: "number", min: 0 },
+            { key: "lloji", label: "Lloji i biletës", placeholder: "Standard" },
+            {
+              key: "cmimi",
+              label: "Çmimi i biletës (€)",
+              required: true,
+              type: "number",
+              min: 0,
+              step: "0.01",
+              placeholder: "25.00",
+            },
+            {
+              key: "sasia_disponueshme",
+              label: "Sasia e biletave",
+              type: "number",
+              min: 0,
+              placeholder: "Sasia",
+            },
             {
               key: "publication_status",
               label: "Publication",

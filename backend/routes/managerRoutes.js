@@ -1,5 +1,6 @@
 const express = require("express");
 const db = require("../models");
+const { createDefaultTicketForEvent } = require("../services/ticketService");
 
 const router = express.Router();
 
@@ -116,6 +117,9 @@ router.post("/events", async (req, res) => {
       speaker_id,
       tema,
       ora,
+      cmimi,
+      lloji,
+      sasia_disponueshme,
     } = req.body;
 
     if (!titulli || !data_fillimit || !data_perfundimit || !lokacioni) {
@@ -152,6 +156,12 @@ router.post("/events", async (req, res) => {
       imazhi: imazhi || null,
     });
     console.log("Event created:", row.id);
+
+    await createDefaultTicketForEvent(row, {
+      cmimi,
+      lloji,
+      sasia_disponueshme,
+    });
 
     if (speaker_id) {
       const speaker = await db.Speaker.findByPk(speaker_id);
