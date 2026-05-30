@@ -195,6 +195,10 @@ app.use("/api/manager/event-categories", managerEventCategoriesRoutes);
 const speakerRoutes = require("./routes/speakerRoutes");
 app.use("/api/speaker", speakerRoutes);
 
+// Sponsor Routes
+const sponsorRoutes = require("./routes/sponsorRoutes");
+app.use("/api/sponsor", sponsorRoutes);
+
 // New Events CRUD Routes 🚀
 const eventRoutes = require("./routes/eventRoutes");
 app.use("/api/events", eventRoutes);
@@ -210,6 +214,9 @@ app.use("/api/feedback", feedbackRoutes);
 // Manager: view all feedback
 const managerFeedbackRoutes = require("./routes/managerFeedbackRoutes");
 app.use("/api/manager/feedback", managerFeedbackRoutes);
+
+const managerSponsorshipRoutes = require("./routes/managerSponsorshipRoutes");
+app.use("/api/manager/sponsorships", managerSponsorshipRoutes);
 
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;

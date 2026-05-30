@@ -18,6 +18,8 @@ module.exports = (sequelize, DataTypes) => {
       emertimi: { type: DataTypes.STRING, allowNull: false },
       logoja: DataTypes.STRING,
       website: DataTypes.STRING,
+      email: DataTypes.STRING,
+      mesazhi: DataTypes.TEXT,
       niveli_sponsorizimit: DataTypes.STRING,
     },
     { sequelize, modelName: "Sponsor", tableName: "Sponsors" },

@@ -12,6 +12,7 @@ const sidebarLinks = [
   "Event Categories",
   "User & Role",
   "Schedule Control",
+  "Sponsorship Requests",
   "Ticket Management",
   "Feedback",
   "Reports",
@@ -25,6 +26,23 @@ function formatPrice(value) {
   const num = Number(value);
   if (Number.isNaN(num)) return "—";
   return num.toFixed(2);
+}
+
+async function fetchJson(url, options) {
+  const res = await fetch(url, options);
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error(
+      "Backend API unavailable. Restart the backend (cd backend && npm run dev) and refresh this page.",
+    );
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || `Request failed (${res.status})`);
+  }
+  return data;
 }
 
 function statusPill(status) {
@@ -53,6 +71,12 @@ function ManagerDashboard() {
   const [managerFeedbacks, setManagerFeedbacks] = useState([]);
   const [feedbacksLoading, setFeedbacksLoading] = useState(false);
   const [feedbacksError, setFeedbacksError] = useState("");
+  const [sponsorshipRequests, setSponsorshipRequests] = useState([]);
+  const [sponsorshipsLoading, setSponsorshipsLoading] = useState(false);
+  const [sponsorshipsError, setSponsorshipsError] = useState("");
+  const [sponsorshipMessage, setSponsorshipMessage] = useState("");
+  const [sponsorshipFilter, setSponsorshipFilter] = useState("all");
+  const [updatingSponsorshipId, setUpdatingSponsorshipId] = useState(null);
 
   const emptyEventForm = () => ({
     titulli: "",
@@ -128,6 +152,43 @@ function ManagerDashboard() {
     }
   }, []);
 
+  const loadSponsorshipRequests = useCallback(async (filter = sponsorshipFilter) => {
+    setSponsorshipsLoading(true);
+    setSponsorshipsError("");
+    try {
+      const query =
+        filter && filter !== "all"
+          ? `?status=${encodeURIComponent(filter)}`
+          : "";
+      const data = await fetchJson(`/api/manager/sponsorships${query}`);
+      setSponsorshipRequests(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setSponsorshipsError(err.message || "Failed to load sponsorship requests");
+      setSponsorshipRequests([]);
+    } finally {
+      setSponsorshipsLoading(false);
+    }
+  }, [sponsorshipFilter]);
+
+  async function updateSponsorshipStatus(requestId, status) {
+    setUpdatingSponsorshipId(requestId);
+    setSponsorshipMessage("");
+    setSponsorshipsError("");
+    try {
+      const data = await fetchJson(`/api/manager/sponsorships/${requestId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      setSponsorshipMessage(data.message || "Status updated");
+      await loadSponsorshipRequests();
+    } catch (err) {
+      setSponsorshipsError(err.message || "Failed to update status");
+    } finally {
+      setUpdatingSponsorshipId(null);
+    }
+  }
+
   useEffect(() => {
     loadEvents();
     loadTickets();
@@ -147,6 +208,12 @@ function ManagerDashboard() {
       }
     })();
   }, [loadEvents, loadTickets, loadSpeakers, loadManagerFeedbacks]);
+
+  useEffect(() => {
+    if (activePage === "Sponsorship Requests") {
+      loadSponsorshipRequests();
+    }
+  }, [activePage, loadSponsorshipRequests]);
 
   const [userForm, setUserForm] = useState({
     name: "",
@@ -1090,6 +1157,135 @@ function ManagerDashboard() {
     );
   }
 
+  function sponsorshipStatusPill(status) {
+    if (status === "accepted") {
+      return "border-emerald-400/25 bg-emerald-400/10 text-emerald-100";
+    }
+    if (status === "rejected") {
+      return "border-rose-400/25 bg-rose-400/10 text-rose-100";
+    }
+    return "border-amber-400/25 bg-amber-400/10 text-amber-100";
+  }
+
+  function renderSponsorshipRequests() {
+    const pendingCount = sponsorshipRequests.filter((r) => r.status === "pending").length;
+
+    return (
+      <section className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="m-0 text-xl text-[#f4f7fb]">Sponsorship requests</h2>
+            <p className="m-0 mt-1 text-[13px] text-[#8f9ab0]">
+              Review sponsor applications and accept or reject them.
+              {pendingCount > 0 ? ` ${pendingCount} pending.` : ""}
+            </p>
+          </div>
+          <select
+            className="rounded-[10px] border border-[#2b3446] bg-[#171d27] px-3 py-2 text-sm text-slate-100"
+            value={sponsorshipFilter}
+            onChange={(e) => {
+              setSponsorshipFilter(e.target.value);
+              loadSponsorshipRequests(e.target.value);
+            }}
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="accepted">Accepted</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+
+        {sponsorshipMessage ? (
+          <p className="mt-3 text-sm text-emerald-400">{sponsorshipMessage}</p>
+        ) : null}
+        {sponsorshipsError ? (
+          <p className="mt-3 text-sm text-red-400">{sponsorshipsError}</p>
+        ) : null}
+
+        {sponsorshipsLoading ? (
+          <p className="mt-4 text-sm text-[#8f9ab0]">Loading requests...</p>
+        ) : sponsorshipRequests.length === 0 ? (
+          <p className="mt-4 text-sm text-[#8f9ab0]">No sponsorship requests found.</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {sponsorshipRequests.map((req) => (
+              <li
+                key={req.id}
+                className="rounded-[12px] border border-[#293346] bg-[#171d27] p-4"
+              >
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="m-0 text-[15px] font-medium text-[#f8fbff]">
+                        {req.companyName}
+                      </h3>
+                      <span
+                        className={`rounded-full border px-2.5 py-0.5 text-[11px] ${sponsorshipStatusPill(req.status)}`}
+                      >
+                        {req.statusLabel}
+                      </span>
+                    </div>
+                    <p className="m-0 mt-1 text-[13px] text-[#95a2ba]">
+                      {req.eventTitle}
+                      {req.eventDate ? ` · ${req.eventDate}` : ""}
+                      {req.eventLocation ? ` · ${req.eventLocation}` : ""}
+                    </p>
+                    <p className="m-0 mt-1 text-[13px] text-[#95a2ba]">
+                      {req.tier} · ${req.budget}
+                      {req.email ? ` · ${req.email}` : ""}
+                    </p>
+                    {req.website ? (
+                      <p className="m-0 mt-1 text-[13px] text-[#6ad3ff]">{req.website}</p>
+                    ) : null}
+                    {req.message ? (
+                      <p className="m-0 mt-2 text-[13px] text-[#c5cdd9]">{req.message}</p>
+                    ) : null}
+                    <p className="m-0 mt-1 text-[11px] text-[#8f9ab0]">
+                      Submitted {req.submittedAt ? new Date(req.submittedAt).toLocaleString() : ""}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    {req.status !== "accepted" ? (
+                      <button
+                        type="button"
+                        disabled={updatingSponsorshipId === req.id}
+                        onClick={() => updateSponsorshipStatus(req.id, "accepted")}
+                        className="rounded-[8px] bg-emerald-600/90 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                      >
+                        Accept
+                      </button>
+                    ) : null}
+                    {req.status !== "rejected" ? (
+                      <button
+                        type="button"
+                        disabled={updatingSponsorshipId === req.id}
+                        onClick={() => updateSponsorshipStatus(req.id, "rejected")}
+                        className="rounded-[8px] border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-[12px] text-rose-200 hover:bg-rose-500/20 disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    ) : null}
+                    {req.status !== "pending" ? (
+                      <button
+                        type="button"
+                        disabled={updatingSponsorshipId === req.id}
+                        onClick={() => updateSponsorshipStatus(req.id, "pending")}
+                        className="rounded-[8px] border border-[#2b3446] bg-[#141a23] px-3 py-1.5 text-[12px] text-[#b6c0cf] hover:border-[#3b4760] disabled:opacity-50"
+                      >
+                        Mark pending
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    );
+  }
+
   function renderReports() {
     const publishedEvents = events.filter((e) => e.status === "Published").length;
     const activeUsers = users.filter((u) => u.status === "Active").length;
@@ -1121,6 +1317,7 @@ function ManagerDashboard() {
     if (activePage === "Event Categories") return <ManagerEventCategories />;
     if (activePage === "User & Role") return renderUserRole();
     if (activePage === "Schedule Control") return renderScheduleControl();
+    if (activePage === "Sponsorship Requests") return renderSponsorshipRequests();
     if (activePage === "Ticket Management") return renderTickets();
     if (activePage === "Feedback") return renderFeedback();
     if (activePage === "Reports") return renderReports();
