@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ManagerEditModal from "./ManagerEditModal.jsx";
 import ManagerEventCategories from "./ManagerEventCategories.jsx";
+import { certificateApi } from "../api/certificateApi.js";
+import { couponApi } from "../api/couponApi.js";
 
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -12,8 +14,11 @@ const sidebarLinks = [
   "Event Categories",
   "User & Role",
   "Schedule Control",
+  "Sponsorship Requests",
   "Ticket Management",
   "Feedback",
+  "Certificates",
+  "Coupons",
   "Reports",
 ];
 
@@ -25,6 +30,23 @@ function formatPrice(value) {
   const num = Number(value);
   if (Number.isNaN(num)) return "—";
   return num.toFixed(2);
+}
+
+async function fetchJson(url, options) {
+  const res = await fetch(url, options);
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error(
+      "Backend API unavailable. Restart the backend (cd backend && npm run dev) and refresh this page.",
+    );
+  }
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || `Request failed (${res.status})`);
+  }
+  return data;
 }
 
 function statusPill(status) {
@@ -133,6 +155,7 @@ function ManagerDashboard() {
     loadTickets();
     loadSpeakers();
     loadManagerFeedbacks();
+    loadDashboardStats();
     // Load manager users + schedule
     (async () => {
       try {
@@ -178,16 +201,38 @@ function ManagerDashboard() {
 
   const dashboardCards = useMemo(
     () => [
-      { label: "Total Events", value: String(events.length), icon: "📅" },
-      { label: "Total Users", value: String(users.length), icon: "👥" },
-      { label: "Schedule Slots", value: String(schedule.length), icon: "🕒" },
       {
-        label: "Total Tickets",
-        value: String(tickets.length),
+        label: "Future Events",
+        value: dashboardStatsLoading
+          ? "…"
+          : String(dashboardStats.futureEventsCount ?? 0),
+        icon: "📅",
+      },
+      {
+        label: "Sold Tickets",
+        value: dashboardStatsLoading
+          ? "…"
+          : String(dashboardStats.soldTickets ?? 0),
         icon: "🎟",
       },
+      {
+        label: "Income",
+        value: dashboardStatsLoading
+          ? "…"
+          : new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            }).format(Number(dashboardStats.income) || 0),
+        icon: "💰",
+      },
+      {
+        label: "Total Events",
+        value: String(events.length),
+        icon: "📋",
+      },
     ],
-    [events.length, users.length, schedule.length, tickets.length],
+    [dashboardStats, dashboardStatsLoading, events.length],
   );
 
   async function createEvent(e) {
@@ -239,6 +284,7 @@ function ManagerDashboard() {
       if (!res.ok) throw new Error(data.error || "Gabim");
       setEvents((prev) => [data, ...prev]);
       await loadTickets();
+      await loadDashboardStats();
       setEventForm(emptyEventForm());
       setEventMessage("Eventi dhe bileta u shtuan.");
     } catch (err) {
@@ -508,6 +554,47 @@ function ManagerDashboard() {
             </article>
           ))}
         </section>
+
+        <section className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <div className="mb-3.5 flex items-center justify-between">
+            <h3 className="m-0 text-xl text-[#f4f7fb]">Upcoming Future Events</h3>
+            <button
+              type="button"
+              className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5"
+              onClick={loadDashboardStats}
+            >
+              Rifresko
+            </button>
+          </div>
+          <ul className="m-0 flex list-none flex-col gap-3 p-0">
+            {dashboardStatsLoading ? (
+              <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar eventet...</li>
+            ) : null}
+            {!dashboardStatsLoading &&
+            (dashboardStats.futureEvents?.length ?? 0) === 0 ? (
+              <li className="text-[13px] text-[#95a2ba]">Nuk ka evente të ardhshme.</li>
+            ) : null}
+            {(dashboardStats.futureEvents || []).map((event) => (
+              <li
+                key={event.id}
+                className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
+              >
+                <div>
+                  <p className="m-0 text-[14px] font-medium text-[#f8fbff]">{event.title}</p>
+                  <p className="mt-1 text-[13px] text-[#95a2ba]">
+                    {event.host} · {event.date} · {event.time}
+                  </p>
+                  <p className="mt-1 text-[12px] text-[#8f9ab0]">{event.location}</p>
+                </div>
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(event.status)}`}
+                >
+                  {event.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       </>
     );
   }
@@ -667,13 +754,30 @@ function ManagerDashboard() {
                   <p className="mt-1 text-[12px] text-[#95a2ba]">
                     {event.date} · {event.venue}
                   </p>
-                  {event.speakers?.length > 0 ? (
-                    <p className="mt-1 text-[12px] text-[#7dd3a8]">
-                      🎤{" "}
-                      {event.speakers
-                        .map((s) => `${s.name} (${s.tema}, ${s.ora})`)
-                        .join(" · ")}
-                    </p>
+{event.speakers?.length > 0 ? (
+                    <div className="mt-1">
+                      {event.speakers.map((s) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between gap-3 text-[12px]"
+                        >
+                          <p className="text-[#7dd3a8]">
+                            🎤 {s.name} ({s.tema}, {s.ora})
+                          </p>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                              s.assignmentStatus === "accepted"
+                                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
+                                : s.assignmentStatus === "declined"
+                                  ? "border-rose-400/25 bg-rose-400/10 text-rose-100"
+                                  : "border-amber-400/25 bg-amber-400/10 text-amber-100"
+                            }`}
+                          >
+                            {String(s.assignmentStatus || "pending")}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
@@ -1121,8 +1225,11 @@ function ManagerDashboard() {
     if (activePage === "Event Categories") return <ManagerEventCategories />;
     if (activePage === "User & Role") return renderUserRole();
     if (activePage === "Schedule Control") return renderScheduleControl();
+    if (activePage === "Sponsorship Requests") return renderSponsorshipRequests();
     if (activePage === "Ticket Management") return renderTickets();
     if (activePage === "Feedback") return renderFeedback();
+    if (activePage === "Certificates") return renderCertificates();
+    if (activePage === "Coupons") return renderCoupons();
     if (activePage === "Reports") return renderReports();
     return renderDashboard();
   }
