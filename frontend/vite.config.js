@@ -4,19 +4,18 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  // Must match PORT in backend/.env (yours is 3001)
-  const apiTarget = env.VITE_API_PROXY || "http://localhost:3001";
 
-<<<<<<< HEAD
+  const apiTarget = env.VITE_API_PROXY || "http://localhost:5000";
+
   return {
     plugins: [react(), tailwindcss()],
     server: {
       proxy: {
-        "/api": apiTarget,
+        "/api": {
+          target: apiTarget,
+          changeOrigin: true,
+        },
       },
-=======
-      '/api': 'http://localhost:3001', // backend API proxy
->>>>>>> d2fab1cafbce1166bb284ddf02bb53c5902f266d
     },
   };
 });

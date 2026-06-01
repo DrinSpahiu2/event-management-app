@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { upcomingEvents } from "./eventsData.js";
+import { useNavigate } from "react-router-dom";
+import ClientHeader from "./ClientHeader.jsx";
+import { certificateApi } from "../api/certificateApi.js";
 
 function UserEventsPage() {
   const navigate = useNavigate();
@@ -37,11 +38,15 @@ function UserEventsPage() {
         r.json().then((d) => ({ ok: r.ok, data: d })),
       ),
       fetch("/api/events").then((r) => r.json().then((d) => ({ ok: r.ok, data: d }))),
+      fetch(`/api/registrations/me/event-ids?userId=${encodeURIComponent(userId)}`).then(
+        (r) => r.json().then((d) => ({ ok: r.ok, data: d })),
+      ),
+      certificateApi.getByUser(userId).then((data) => ({ ok: true, data })),
     ])
-      .then(([fbRes, evRes]) => {
+      .then(([fbRes, evRes, regRes, certRes]) => {
         if (!fbRes.ok) throw new Error(fbRes.data.error || "Gabim në feedback");
         setFeedbacks(Array.isArray(fbRes.data) ? fbRes.data : []);
-        
+
         if (evRes.ok && Array.isArray(evRes.data)) {
           setEvents(evRes.data);
         }
@@ -64,13 +69,27 @@ function UserEventsPage() {
       });
   }, [userId]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userRole");
-    navigate("/signin");
-  };
+  function downloadCertificate(cert) {
+    const text = [
+      "EVENT EMS — Certificate",
+      "",
+      `Event: ${cert.eventTitle}`,
+      `Code: ${cert.code}`,
+      `Issued: ${cert.issuedAt}`,
+      cert.eventLocation ? `Location: ${cert.eventLocation}` : "",
+      "",
+      `Recipient: ${cert.userName || "Participant"}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${cert.code}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   function resetForm() {
     setForm({ eventId: "", rating: "5", comment: "" });
@@ -149,9 +168,9 @@ function UserEventsPage() {
   function startEdit(item) {
     setEditingId(item.id);
     setForm({
-      eventId: item.eventId,
-      rating: String(item.rating),
-      comment: item.comment,
+      eventId: String(item.event_id ?? item.eventId ?? ""),
+      rating: String(item.vleresimi ?? item.rating ?? "5"),
+      comment: item.komenti ?? item.comment ?? "",
     });
     setFeedbackMessage("");
   }

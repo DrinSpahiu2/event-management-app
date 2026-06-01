@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ClientHeader from "./ClientHeader.jsx";
-import { NavLink, useNavigate, useParams } from "react-router-dom";
-import { upcomingEvents } from "./eventsData.js";
 import { certificateApi } from "../api/certificateApi.js";
 import { couponApi } from "../api/couponApi.js";
 
 function EventDetailsPage() {
-  const { eventId } = useParams(); // 🚀 Matches ':eventId' from App.jsx exactly!
+  const { eventId } = useParams();
   const navigate = useNavigate();
-  
   const userId = localStorage.getItem("userId");
+
   const [event, setEvent] = useState(null);
   const [alreadyPurchased, setAlreadyPurchased] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,21 +20,6 @@ function EventDetailsPage() {
     coupons: [],
   });
   const [couponsLoading, setCouponsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!eventId) return;
-    setCouponsLoading(true);
-    couponApi
-      .getByEvent(eventId)
-      .then((data) => {
-        setEventCoupons({
-          totalActive: data.totalActive ?? 0,
-          coupons: data.coupons ?? [],
-        });
-      })
-      .catch(() => setEventCoupons({ totalActive: 0, coupons: [] }))
-      .finally(() => setCouponsLoading(false));
-  }, [eventId]);
   const [certStats, setCertStats] = useState({
     totalIssued: 0,
     certificates: [],
@@ -53,6 +36,41 @@ function EventDetailsPage() {
       if (!res.ok) throw new Error("Eventi nuk u gjet ose dështoi lidhja me serverin.");
       return res.json();
     });
+
+    const purchasePromise = userId
+      ? fetch(
+          `/api/registrations/check?userId=${encodeURIComponent(userId)}&eventId=${encodeURIComponent(eventId)}`,
+        ).then((res) => (res.ok ? res.json() : { purchased: false }))
+      : Promise.resolve({ purchased: false });
+
+    Promise.all([eventPromise, purchasePromise])
+      .then(([data, check]) => {
+        setEvent(data);
+        setAlreadyPurchased(Boolean(check.purchased));
+        setError("");
+      })
+      .catch((err) => {
+        console.error("Error fetching event details:", err.message);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }, [eventId, userId]);
+
+  useEffect(() => {
+    if (!eventId) return;
+    setCouponsLoading(true);
+    couponApi
+      .getByEvent(eventId)
+      .then((data) => {
+        setEventCoupons({
+          totalActive: data.totalActive ?? 0,
+          coupons: data.coupons ?? [],
+        });
+      })
+      .catch(() => setEventCoupons({ totalActive: 0, coupons: [] }))
+      .finally(() => setCouponsLoading(false));
+  }, [eventId]);
+
   useEffect(() => {
     if (!eventId) return;
     setCertsLoading(true);
@@ -72,30 +90,37 @@ function EventDetailsPage() {
       .finally(() => setCertsLoading(false));
   }, [eventId]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    navigate("/signin");
-  };
+  function handleFeedbackSubmit(submitEvent) {
+    submitEvent.preventDefault();
+    if (!feedback.trim()) {
+      setMessage("Shkruaj feedback para se të dërgosh.");
+      return;
+    }
+    if (!userId) {
+      setMessage("Kyçu përsëri për të dërguar feedback.");
+      return;
+    }
 
-    const purchasePromise =
-      userId
-        ? fetch(
-            `/api/registrations/check?userId=${encodeURIComponent(userId)}&eventId=${encodeURIComponent(eventId)}`,
-          ).then((res) => (res.ok ? res.json() : { purchased: false }))
-        : Promise.resolve({ purchased: false });
-
-    Promise.all([eventPromise, purchasePromise])
-      .then(([data, check]) => {
-        setEvent(data);
-        setAlreadyPurchased(Boolean(check.purchased));
-        setError("");
+    fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: Number(userId),
+        event_id: Number(eventId),
+        vleresimi: 5,
+        komenti: feedback.trim(),
+      }),
+    })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) throw new Error(data.error || "Gabim");
+        setMessage("Faleminderit! Feedback-u u dërgua.");
+        setFeedback("");
       })
       .catch((err) => {
-        console.error("❌ Error fetching event details:", err.message);
-        setError(err.message);
-      })
-      .finally(() => setLoading(false));
-  }, [eventId, userId]);
+        setMessage(err.message || "Nuk u dërgua feedback-u.");
+      });
+  }
 
   if (loading) {
     return (
@@ -109,8 +134,9 @@ function EventDetailsPage() {
     return (
       <div className="min-h-screen bg-[#10141d] flex flex-col items-center justify-center text-white gap-4">
         <p className="text-rose-400 font-medium">⚠️ {error || "Eventi nuk ekziston."}</p>
-        <button 
-          onClick={() => navigate("/events")} 
+        <button
+          type="button"
+          onClick={() => navigate("/events")}
           className="rounded-md bg-white/10 px-4 py-2 text-sm hover:bg-white/15 transition"
         >
           Kthehu tek Eventet
@@ -119,21 +145,24 @@ function EventDetailsPage() {
     );
   }
 
-  // Extract price safely from your nested eager-loaded Tickets relation model
   const kaBiletë = event.tickets && event.tickets.length > 0;
-  const cmimiBiletes = kaBiletë ? `${event.tickets[0].cmimi} EUR` : "Falas / Pa Çmim";
+  const cmimiBiletes = kaBiletë
+    ? `${Number(event.tickets[0].cmimi).toFixed(2)} EUR`
+    : "Falas / Pa Çmim";
 
   return (
     <div className="min-h-screen bg-[#10141d] text-white">
       <ClientHeader subtitle="Event Details" />
 
-      <main className="mx-auto max-w-4xl px-6 py-12">
+      <main className="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[1.1fr_1fr]">
         <article className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-          {/* Main Banner Image */}
           <img
-            src={event.imazhi || "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=1200&q=80"}
+            src={
+              event.imazhi ||
+              "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=1200&q=80"
+            }
             alt={event.titulli}
-            className="h-80 w-full object-cover border-b border-white/10"
+            className="h-64 w-full object-cover border-b border-white/10"
           />
 
           <div className="p-6 md:p-8">
@@ -144,8 +173,7 @@ function EventDetailsPage() {
               </span>
             </div>
 
-            {/* Event Meta Specifications */}
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-4 border-y border-white/10 py-6 text-sm text-white/80">
+            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 border-y border-white/10 py-6 text-sm text-white/80">
               <div>
                 <p className="text-white/40 uppercase text-xs font-bold tracking-wider">📅 Data</p>
                 <p className="mt-1 text-base font-medium">{event.data_fillimit}</p>
@@ -164,7 +192,6 @@ function EventDetailsPage() {
               </div>
             </div>
 
-            {/* Description Text block */}
             <div className="mt-8">
               <h2 className="text-xl font-semibold">Përshkrimi i Eventit</h2>
               <p className="mt-3 text-sm text-white/70 leading-relaxed whitespace-pre-line">
@@ -199,56 +226,6 @@ function EventDetailsPage() {
           </div>
         </article>
 
-          <nav className="hidden items-center gap-6 text-sm text-white/70 md:flex">
-            <NavLink className="hover:text-white" to="/">
-              Home
-            </NavLink>
-            <NavLink className="hover:text-white" to="/events">
-              Events
-            </NavLink>
-            <NavLink className="hover:text-white" to="/about">
-              About
-            </NavLink>
-            <NavLink className="hover:text-white" to="/contact">
-              Contact
-            </NavLink>
-          </nav>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500"
-          >
-            Logout
-          </button>
-        </div>
-      </header>
-
-      <main className="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[1.1fr_1fr]">
-        <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-          <img src={event.image} alt={event.title} className="h-64 w-full object-cover" />
-          <div className="p-6">
-            <h1 className="text-3xl font-semibold">{event.title}</h1>
-            <p className="mt-3 text-sm text-white/70">{event.date}</p>
-            <p className="text-sm text-white/70">{event.time}</p>
-            <p className="text-sm text-white/70">{event.location}</p>
-            <p className="mt-4 text-sm leading-relaxed text-white/75">
-              {event.description}
-            </p>
-
-            <div className="mt-6 flex items-center justify-between gap-3">
-              <span className="text-xl font-semibold">Ticket: ${event.price}</span>
-              <button
-                type="button"
-                onClick={() => navigate(`/events/${event.id}/checkout`)}
-                className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold hover:bg-rose-500"
-              >
-                Purchase Ticket
-              </button>
-            </div>
-          </div>
-        </section>
-
         <div className="flex flex-col gap-6">
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <h2 className="text-xl font-semibold">Available Coupons</h2>
@@ -279,7 +256,7 @@ function EventDetailsPage() {
                   <span className="text-white/70">
                     {c.discountType === "percentage"
                       ? `${c.discountValue}% off`
-                      : `$${c.discountValue} off`}
+                      : `${c.discountValue} EUR off`}
                   </span>
                 </li>
               ))}
@@ -291,9 +268,7 @@ function EventDetailsPage() {
             <p className="mt-2 text-sm text-white/65">
               Certifikata të lëshuara për këtë event nga menaxheri.
             </p>
-            {certsError ? (
-              <p className="mt-3 text-sm text-rose-300">{certsError}</p>
-            ) : null}
+            {certsError ? <p className="mt-3 text-sm text-rose-300">{certsError}</p> : null}
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="rounded-lg border border-white/10 bg-[#111925] p-3">
                 <p className="text-xs text-white/50">Total issued</p>
@@ -307,9 +282,7 @@ function EventDetailsPage() {
               </div>
             </div>
             <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto">
-              {certsLoading ? (
-                <li className="text-sm text-white/60">Loading...</li>
-              ) : null}
+              {certsLoading ? <li className="text-sm text-white/60">Loading...</li> : null}
               {!certsLoading && certStats.certificates.length === 0 ? (
                 <li className="text-sm text-white/60">No certificates issued yet.</li>
               ) : null}
