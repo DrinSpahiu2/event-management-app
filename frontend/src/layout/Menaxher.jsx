@@ -236,7 +236,115 @@ function ManagerDashboard() {
   const [userEditMessage, setUserEditMessage] = useState("");
   const [userEditValues, setUserEditValues] = useState(null);
 
+  const [sponsorshipRequests, setSponsorshipRequests] = useState([]);
+  const [sponsorshipLoading, setSponsorshipLoading] = useState(false);
+  const [sponsorshipError, setSponsorshipError] = useState("");
+  const [sponsorshipStatusFilter, setSponsorshipStatusFilter] = useState("");
 
+  const [certEventId, setCertEventId] = useState("");
+  const [certEventData, setCertEventData] = useState({
+    totalIssued: 0,
+    certificates: [],
+    eventTitle: "",
+  });
+  const [certsLoading, setCertsLoading] = useState(false);
+  const [certMessage, setCertMessage] = useState("");
+  const [certIssueForm, setCertIssueForm] = useState({
+    user_id: "",
+    event_id: "",
+    kodi: "",
+  });
+
+  const [coupons, setCoupons] = useState([]);
+  const [couponsLoading, setCouponsLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [couponEventFilter, setCouponEventFilter] = useState("");
+  const [couponForm, setCouponForm] = useState({
+    id: null,
+    code: "",
+    discount_type: "percentage",
+    discount_value: "",
+    is_active: true,
+    event_id: "",
+  });
+
+  const loadSponsorshipRequests = useCallback(async () => {
+    setSponsorshipLoading(true);
+    setSponsorshipError("");
+    try {
+      const url = sponsorshipStatusFilter
+        ? `/api/manager/sponsorships?status=${encodeURIComponent(sponsorshipStatusFilter)}`
+        : "/api/manager/sponsorships";
+      const data = await fetchJson(url);
+      setSponsorshipRequests(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setSponsorshipError(err.message || "Nuk u ngarkuan kërkesat e sponsorizimit.");
+      setSponsorshipRequests([]);
+    } finally {
+      setSponsorshipLoading(false);
+    }
+  }, [sponsorshipStatusFilter]);
+
+  const loadCertEventData = useCallback(async (eventId) => {
+    if (!eventId) {
+      setCertEventData({ totalIssued: 0, certificates: [], eventTitle: "" });
+      return;
+    }
+    setCertsLoading(true);
+    setCertMessage("");
+    try {
+      const data = await certificateApi.getByEvent(eventId);
+      setCertEventData({
+        totalIssued: data.totalIssued ?? 0,
+        certificates: data.certificates ?? [],
+        eventTitle: data.eventTitle ?? "",
+      });
+    } catch (err) {
+      setCertMessage(err.message || "Nuk u lexuan certifikatat.");
+      setCertEventData({ totalIssued: 0, certificates: [], eventTitle: "" });
+    } finally {
+      setCertsLoading(false);
+    }
+  }, []);
+
+  const loadCoupons = useCallback(async () => {
+    setCouponsLoading(true);
+    setCouponError("");
+    try {
+      const data = await couponApi.list();
+      setCoupons(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setCouponError(err.message || "Nuk u lexuan kuponët.");
+      setCoupons([]);
+    } finally {
+      setCouponsLoading(false);
+    }
+  }, []);
+
+  const filteredCoupons = useMemo(() => {
+    if (!couponEventFilter) return coupons;
+    return coupons.filter(
+      (c) => c.eventId === couponEventFilter || c.eventId == null || c.eventId === "",
+    );
+  }, [coupons, couponEventFilter]);
+
+  useEffect(() => {
+    if (activePage === "Sponsorship Requests") {
+      loadSponsorshipRequests();
+    }
+  }, [activePage, loadSponsorshipRequests]);
+
+  useEffect(() => {
+    if (activePage === "Coupons") {
+      loadCoupons();
+    }
+  }, [activePage, loadCoupons]);
+
+  useEffect(() => {
+    if (activePage === "Certificates" && certEventId) {
+      loadCertEventData(certEventId);
+    }
+  }, [activePage, certEventId, loadCertEventData]);
 
   const dashboardCards = useMemo(
     () => [
@@ -1233,6 +1341,516 @@ function ManagerDashboard() {
             </li>
           ))}
         </ul>
+      </section>
+    );
+  }
+
+  async function updateSponsorshipStatus(id, status) {
+    setSponsorshipError("");
+    try {
+      await fetchJson(`/api/manager/sponsorships/${encodeURIComponent(id)}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      await loadSponsorshipRequests();
+    } catch (err) {
+      setSponsorshipError(err.message || "Nuk u përditësua statusi.");
+    }
+  }
+
+  async function handleIssueCertificate(e) {
+    e.preventDefault();
+    setCertMessage("");
+    if (!certIssueForm.user_id || !certIssueForm.event_id) {
+      setCertMessage("Zgjidh përdoruesin dhe eventin.");
+      return;
+    }
+    try {
+      const issuedEventId = certIssueForm.event_id;
+      await certificateApi.issue({
+        user_id: certIssueForm.user_id,
+        event_id: issuedEventId,
+        kodi: certIssueForm.kodi.trim() || undefined,
+      });
+      setCertMessage("Certifikata u lëshua.");
+      setCertIssueForm({ user_id: "", event_id: "", kodi: "" });
+      if (certEventId === issuedEventId) {
+        await loadCertEventData(certEventId);
+      }
+    } catch (err) {
+      setCertMessage(err.message || "Nuk u lëshua certifikata.");
+    }
+  }
+
+  async function handleRevokeCertificate(id) {
+    if (!window.confirm("Revoko këtë certifikatë?")) return;
+    setCertMessage("");
+    try {
+      await certificateApi.revoke(id);
+      setCertMessage("Certifikata u revokua.");
+      if (certEventId) await loadCertEventData(certEventId);
+    } catch (err) {
+      setCertMessage(err.message || "Nuk u revokua.");
+    }
+  }
+
+  function resetCouponForm() {
+    setCouponForm({
+      id: null,
+      code: "",
+      discount_type: "percentage",
+      discount_value: "",
+      is_active: true,
+      event_id: "",
+    });
+  }
+
+  async function handleSaveCoupon(e) {
+    e.preventDefault();
+    setCouponError("");
+    const body = {
+      code: couponForm.code,
+      discount_type: couponForm.discount_type,
+      discount_value: Number(couponForm.discount_value),
+      is_active: couponForm.is_active,
+      event_id: couponForm.event_id || null,
+    };
+    try {
+      if (couponForm.id) {
+        await couponApi.update(couponForm.id, body);
+      } else {
+        await couponApi.create(body);
+      }
+      resetCouponForm();
+      await loadCoupons();
+    } catch (err) {
+      setCouponError(err.message || "Nuk u ruajt kuponi.");
+    }
+  }
+
+  async function handleDeleteCoupon(id) {
+    if (!window.confirm("Fshi këtë kupon?")) return;
+    setCouponError("");
+    try {
+      await couponApi.delete(id);
+      await loadCoupons();
+    } catch (err) {
+      setCouponError(err.message || "Nuk u fshi kuponi.");
+    }
+  }
+
+  function renderSponsorshipRequests() {
+    return (
+      <section className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+          <h3 className="m-0 text-xl text-[#f4f7fb]">Sponsorship Requests</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3 py-2 text-sm text-slate-100 outline-none"
+              value={sponsorshipStatusFilter}
+              onChange={(e) => setSponsorshipStatusFilter(e.target.value)}
+            >
+              <option value="">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <button
+              type="button"
+              className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5"
+              onClick={loadSponsorshipRequests}
+            >
+              Rifresko
+            </button>
+          </div>
+        </div>
+
+        {sponsorshipError ? (
+          <p className="text-[13px] text-rose-300">{sponsorshipError}</p>
+        ) : null}
+
+        {sponsorshipLoading ? (
+          <p className="text-[13px] text-[#95a2ba]">Duke ngarkuar...</p>
+        ) : null}
+
+        <ul className="m-0 mt-4 flex list-none flex-col gap-3 p-0">
+          {!sponsorshipLoading && sponsorshipRequests.length === 0 ? (
+            <li className="text-[13px] text-[#95a2ba]">Nuk ka kërkesa sponsorizimi.</li>
+          ) : null}
+          {sponsorshipRequests.map((req) => (
+            <li
+              key={req.id}
+              className="rounded-[10px] border border-[#293346] bg-[#161d27] p-4"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="m-0 text-[15px] font-medium text-[#f8fbff]">
+                    {req.companyName || "Sponsor"}
+                  </p>
+                  <p className="mt-1 text-[13px] text-[#95a2ba]">
+                    {req.eventTitle} · {req.eventDate}
+                    {req.eventLocation ? ` · ${req.eventLocation}` : ""}
+                  </p>
+                  <p className="mt-1 text-[12px] text-[#8f9ab0]">
+                    {req.email}
+                    {req.website ? ` · ${req.website}` : ""}
+                  </p>
+                  <p className="mt-2 text-[13px] text-[#c5cdd9]">
+                    Tier: {req.tier || "—"} · Budget: €{formatPrice(req.budget)}
+                  </p>
+                  {req.message ? (
+                    <p className="mt-2 text-[13px] text-[#95a2ba]">{req.message}</p>
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(req.statusLabel)}`}
+                  >
+                    {req.statusLabel}
+                  </span>
+                  {req.status === "pending" ? (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="rounded-[8px] border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-[12px] text-emerald-100 hover:bg-emerald-500/20"
+                        onClick={() => updateSponsorshipStatus(req.id, "accepted")}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-[8px] border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-[12px] text-rose-100 hover:bg-rose-500/20"
+                        onClick={() => updateSponsorshipStatus(req.id, "rejected")}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="rounded-[8px] border border-[#2b3446] bg-[#11161f] px-3 py-1.5 text-[12px] text-[#f3f6fb] hover:bg-white/5"
+                      onClick={() => updateSponsorshipStatus(req.id, "pending")}
+                    >
+                      Reset to pending
+                    </button>
+                  )}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
+
+  function renderCertificates() {
+    return (
+      <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1.2fr]">
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <h3 className="m-0 text-xl text-[#f4f7fb]">Issue Certificate</h3>
+          {certMessage ? (
+            <p className="mt-2 text-[13px] text-[#95a2ba]">{certMessage}</p>
+          ) : null}
+          <form className="mt-4 grid gap-3" onSubmit={handleIssueCertificate}>
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              value={certIssueForm.user_id}
+              onChange={(e) =>
+                setCertIssueForm((p) => ({ ...p, user_id: e.target.value }))
+              }
+              required
+            >
+              <option value="">Përdoruesi *</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name} ({u.email})
+                </option>
+              ))}
+            </select>
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              value={certIssueForm.event_id}
+              onChange={(e) =>
+                setCertIssueForm((p) => ({ ...p, event_id: e.target.value }))
+              }
+              required
+            >
+              <option value="">Eventi *</option>
+              {events.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.name}
+                </option>
+              ))}
+            </select>
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Kodi (opsional)"
+              value={certIssueForm.kodi}
+              onChange={(e) =>
+                setCertIssueForm((p) => ({ ...p, kodi: e.target.value }))
+              }
+            />
+            <button
+              type="submit"
+              className="rounded-[10px] bg-[#ff9f1a] px-4 py-2.5 text-sm font-semibold text-[#1f1f1f] hover:brightness-110"
+            >
+              Lësho certifikatën
+            </button>
+          </form>
+        </article>
+
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="m-0 text-xl text-[#f4f7fb]">Certificates by Event</h3>
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3 py-2 text-sm text-slate-100 outline-none"
+              value={certEventId}
+              onChange={(e) => setCertEventId(e.target.value)}
+            >
+              <option value="">Zgjidh eventin</option>
+              {events.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {!certEventId ? (
+            <p className="text-[13px] text-[#95a2ba]">Zgjidh një event për të parë certifikatat.</p>
+          ) : null}
+
+          {certEventId ? (
+            <>
+              <p className="text-[13px] text-[#95a2ba]">
+                {certEventData.eventTitle || "Event"} — {certEventData.totalIssued} të lëshuara
+              </p>
+              {certsLoading ? (
+                <p className="mt-3 text-[13px] text-[#95a2ba]">Duke ngarkuar...</p>
+              ) : (
+                <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
+                  {certEventData.certificates.length === 0 ? (
+                    <li className="text-[13px] text-[#95a2ba]">Nuk ka certifikata për këtë event.</li>
+                  ) : null}
+                  {certEventData.certificates.map((cert) => (
+                    <li
+                      key={cert.id}
+                      className="flex items-center justify-between gap-2 rounded-[10px] border border-[#293346] bg-[#161d27] px-3 py-2"
+                    >
+                      <div>
+                        <p className="m-0 text-[13px] font-medium text-[#f8fbff]">
+                          {cert.userName || "User"}
+                        </p>
+                        <p className="mt-0.5 font-mono text-[12px] text-emerald-200/90">
+                          {cert.code}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-[#8f9ab0]">{cert.issuedAt}</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded-[8px] border border-rose-400/30 px-2.5 py-1 text-[12px] text-rose-100 hover:bg-rose-500/10"
+                        onClick={() => handleRevokeCertificate(cert.id)}
+                      >
+                        Revoke
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : null}
+        </article>
+      </section>
+    );
+  }
+
+  function renderCoupons() {
+    return (
+      <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1.2fr]">
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <h3 className="m-0 text-xl text-[#f4f7fb]">
+            {couponForm.id ? "Edit Coupon" : "Create Coupon"}
+          </h3>
+          {couponError ? (
+            <p className="mt-2 text-[13px] text-rose-300">{couponError}</p>
+          ) : null}
+          <form className="mt-4 grid gap-3" onSubmit={handleSaveCoupon}>
+            <input
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm uppercase text-slate-100 outline-none"
+              placeholder="Kodi *"
+              value={couponForm.code}
+              onChange={(e) =>
+                setCouponForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))
+              }
+              required
+            />
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              value={couponForm.discount_type}
+              onChange={(e) =>
+                setCouponForm((p) => ({ ...p, discount_type: e.target.value }))
+              }
+            >
+              <option value="percentage">Percentage (%)</option>
+              <option value="fixed">Fixed amount (€)</option>
+            </select>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              placeholder="Vlera e zbritjes *"
+              value={couponForm.discount_value}
+              onChange={(e) =>
+                setCouponForm((p) => ({ ...p, discount_value: e.target.value }))
+              }
+              required
+            />
+            <select
+              className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+              value={couponForm.event_id}
+              onChange={(e) =>
+                setCouponForm((p) => ({ ...p, event_id: e.target.value }))
+              }
+            >
+              <option value="">Global (të gjitha eventet)</option>
+              {events.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.name}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-sm text-[#95a2ba]">
+              <input
+                type="checkbox"
+                checked={couponForm.is_active}
+                onChange={(e) =>
+                  setCouponForm((p) => ({ ...p, is_active: e.target.checked }))
+                }
+              />
+              Aktiv
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="rounded-[10px] bg-[#ff9f1a] px-4 py-2.5 text-sm font-semibold text-[#1f1f1f] hover:brightness-110"
+              >
+                {couponForm.id ? "Përditëso" : "Krijo"}
+              </button>
+              {couponForm.id ? (
+                <button
+                  type="button"
+                  className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-4 py-2.5 text-sm text-[#f3f6fb]"
+                  onClick={resetCouponForm}
+                >
+                  Anulo
+                </button>
+              ) : null}
+            </div>
+          </form>
+        </article>
+
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="m-0 text-xl text-[#f4f7fb]">All Coupons</h3>
+            <div className="flex gap-2">
+              <select
+                className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3 py-2 text-sm text-slate-100 outline-none"
+                value={couponEventFilter}
+                onChange={(e) => setCouponEventFilter(e.target.value)}
+              >
+                <option value="">Të gjitha</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] hover:bg-white/5"
+                onClick={loadCoupons}
+              >
+                Rifresko
+              </button>
+            </div>
+          </div>
+
+          {couponsLoading ? (
+            <p className="text-[13px] text-[#95a2ba]">Duke ngarkuar...</p>
+          ) : (
+            <div className="overflow-x-auto rounded-[10px] border border-[#2b3446] bg-[#161d27]">
+              <table className="w-full min-w-[520px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[#2b3446] bg-[#11161f] text-[#97a2b6]">
+                    <th className="p-3 font-medium">Kodi</th>
+                    <th className="p-3 font-medium">Zbritja</th>
+                    <th className="p-3 font-medium">Event</th>
+                    <th className="p-3 font-medium">Status</th>
+                    <th className="p-3 text-right font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#2b3446]">
+                  {filteredCoupons.map((c) => (
+                    <tr key={c.id} className="hover:bg-[#1f2633]/40">
+                      <td className="p-3 font-mono text-emerald-200/90">{c.code}</td>
+                      <td className="p-3 text-[#f4f7fb]">
+                        {c.discountType === "percentage"
+                          ? `${c.discountValue}%`
+                          : `€${formatPrice(c.discountValue)}`}
+                      </td>
+                      <td className="p-3 text-[#8f9ab0]">
+                        {c.eventTitle || "Global"}
+                      </td>
+                      <td className="p-3">
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                            c.isActive ? statusPill("Active") : statusPill("Suspended")
+                          }`}
+                        >
+                          {c.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right">
+                        <button
+                          type="button"
+                          className="mr-2 rounded-[8px] border border-[#2b3446] px-2.5 py-1 text-[12px] hover:bg-white/5"
+                          onClick={() =>
+                            setCouponForm({
+                              id: c.id,
+                              code: c.code,
+                              discount_type: c.discountType,
+                              discount_value: String(c.discountValue),
+                              is_active: c.isActive,
+                              event_id: c.eventId || "",
+                            })
+                          }
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-[8px] border border-rose-400/30 px-2.5 py-1 text-[12px] text-rose-100 hover:bg-rose-500/10"
+                          onClick={() => handleDeleteCoupon(c.id)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!couponsLoading && filteredCoupons.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-[#95a2ba]">
+                        Nuk ka kuponë.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </article>
       </section>
     );
   }
