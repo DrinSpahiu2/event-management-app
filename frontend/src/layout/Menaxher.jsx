@@ -17,6 +17,7 @@ const sidebarLinks = [
   "Sponsorship Requests",
   "Ticket Management",
   "Feedback",
+  "Contact Messages",
   "Certificates",
   "Coupons",
   "Reports",
@@ -268,6 +269,14 @@ function ManagerDashboard() {
     event_id: "",
   });
 
+  const [contactMessages, setContactMessages] = useState([]);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState("");
+  const [contactStatusFilter, setContactStatusFilter] = useState("");
+  const [selectedContactId, setSelectedContactId] = useState(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [replySaving, setReplySaving] = useState(false);
+
   const loadSponsorshipRequests = useCallback(async () => {
     setSponsorshipLoading(true);
     setSponsorshipError("");
@@ -321,6 +330,23 @@ function ManagerDashboard() {
     }
   }, []);
 
+  const loadContactMessages = useCallback(async () => {
+    setContactLoading(true);
+    setContactError("");
+    try {
+      const url = contactStatusFilter
+        ? `/api/manager/contact-messages?status=${encodeURIComponent(contactStatusFilter)}`
+        : "/api/manager/contact-messages";
+      const data = await fetchJson(url);
+      setContactMessages(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setContactError(err.message || "Nuk u lexuan mesazhet e kontaktit.");
+      setContactMessages([]);
+    } finally {
+      setContactLoading(false);
+    }
+  }, [contactStatusFilter]);
+
   const filteredCoupons = useMemo(() => {
     if (!couponEventFilter) return coupons;
     return coupons.filter(
@@ -341,10 +367,29 @@ function ManagerDashboard() {
   }, [activePage, loadCoupons]);
 
   useEffect(() => {
+    if (activePage === "Contact Messages") {
+      loadContactMessages();
+    }
+  }, [activePage, loadContactMessages]);
+
+  useEffect(() => {
     if (activePage === "Certificates" && certEventId) {
       loadCertEventData(certEventId);
     }
   }, [activePage, certEventId, loadCertEventData]);
+
+  const selectedContact = useMemo(
+    () => contactMessages.find((m) => m.id === selectedContactId) || null,
+    [contactMessages, selectedContactId],
+  );
+
+  useEffect(() => {
+    if (selectedContact) {
+      setReplyDraft(selectedContact.reply || "");
+    } else {
+      setReplyDraft("");
+    }
+  }, [selectedContact]);
 
   const dashboardCards = useMemo(
     () => [
@@ -1345,6 +1390,29 @@ function ManagerDashboard() {
     );
   }
 
+  async function handleSendContactReply(e) {
+    e.preventDefault();
+    if (!selectedContactId) return;
+    setReplySaving(true);
+    setContactError("");
+    try {
+      await fetchJson(
+        `/api/manager/contact-messages/${encodeURIComponent(selectedContactId)}/reply`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pergjigja: replyDraft }),
+        },
+      );
+      await loadContactMessages();
+      setContactError("");
+    } catch (err) {
+      setContactError(err.message || "Përgjigja nuk u ruajt.");
+    } finally {
+      setReplySaving(false);
+    }
+  }
+
   async function updateSponsorshipStatus(id, status) {
     setSponsorshipError("");
     try {
@@ -1438,6 +1506,137 @@ function ManagerDashboard() {
     } catch (err) {
       setCouponError(err.message || "Nuk u fshi kuponi.");
     }
+  }
+
+  function renderContactMessages() {
+    return (
+      <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1.1fr]">
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="m-0 text-xl text-[#f4f7fb]">Contact Us Inbox</h3>
+            <div className="flex gap-2">
+              <select
+                className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3 py-2 text-sm text-slate-100 outline-none"
+                value={contactStatusFilter}
+                onChange={(e) => setContactStatusFilter(e.target.value)}
+              >
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="replied">Replied</option>
+              </select>
+              <button
+                type="button"
+                className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] hover:bg-white/5"
+                onClick={loadContactMessages}
+              >
+                Rifresko
+              </button>
+            </div>
+          </div>
+
+          {contactError && !selectedContactId ? (
+            <p className="text-[13px] text-rose-300">{contactError}</p>
+          ) : null}
+
+          {contactLoading ? (
+            <p className="text-[13px] text-[#95a2ba]">Duke ngarkuar...</p>
+          ) : (
+            <ul className="m-0 flex max-h-[520px] list-none flex-col gap-2 overflow-y-auto p-0">
+              {contactMessages.length === 0 ? (
+                <li className="text-[13px] text-[#95a2ba]">Nuk ka mesazhe kontakti.</li>
+              ) : null}
+              {contactMessages.map((msg) => (
+                <li key={msg.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedContactId(msg.id)}
+                    className={`w-full rounded-[10px] border px-3 py-3 text-left transition ${
+                      selectedContactId === msg.id
+                        ? "border-[#ff9f1a]/50 bg-[#ff9f1a]/10"
+                        : "border-[#293346] bg-[#161d27] hover:bg-[#1c2430]"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="m-0 text-[14px] font-medium text-[#f8fbff]">
+                        {msg.subject}
+                      </p>
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${statusPill(
+                          msg.status === "replied" ? "Published" : "Draft",
+                        )}`}
+                      >
+                        {msg.statusLabel}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[12px] text-[#95a2ba]">
+                      {msg.name} · {msg.email}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[#8f9ab0]">{msg.sentAt}</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
+        <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          {!selectedContact ? (
+            <p className="text-[13px] text-[#95a2ba]">
+              Zgjidh një mesazh nga lista për ta lexuar dhe përgjigjur.
+            </p>
+          ) : (
+            <>
+              <h3 className="m-0 text-xl text-[#f4f7fb]">{selectedContact.subject}</h3>
+              <p className="mt-2 text-[13px] text-[#95a2ba]">
+                From: <span className="text-[#f8fbff]">{selectedContact.name}</span> (
+                {selectedContact.email})
+              </p>
+              <p className="text-[12px] text-[#8f9ab0]">Sent: {selectedContact.sentAt}</p>
+
+              <div className="mt-4 rounded-[10px] border border-[#293346] bg-[#161d27] p-3">
+                <p className="m-0 text-[12px] font-medium text-[#95a2ba]">Message</p>
+                <p className="mt-2 whitespace-pre-wrap text-[13px] text-[#e8edf5]">
+                  {selectedContact.message}
+                </p>
+              </div>
+
+              <form className="mt-4 grid gap-3" onSubmit={handleSendContactReply}>
+                <label className="text-[13px] text-[#95a2ba]">
+                  Your reply (manager)
+                  <textarea
+                    rows={5}
+                    value={replyDraft}
+                    onChange={(e) => setReplyDraft(e.target.value)}
+                    placeholder="Shkruaj përgjigjen për klientin..."
+                    className="mt-1 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
+                    required
+                  />
+                </label>
+                {contactError && selectedContactId ? (
+                  <p className="text-[13px] text-rose-300">{contactError}</p>
+                ) : null}
+                {selectedContact.status === "replied" && selectedContact.repliedAt ? (
+                  <p className="text-[12px] text-emerald-300/90">
+                    Replied on {selectedContact.repliedAt}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={replySaving || !replyDraft.trim()}
+                  className="w-fit rounded-[10px] bg-[#ff9f1a] px-4 py-2.5 text-sm font-semibold text-[#1f1f1f] hover:brightness-110 disabled:opacity-50"
+                >
+                  {replySaving
+                    ? "Duke ruajtur..."
+                    : selectedContact.status === "replied"
+                      ? "Përditëso përgjigjen"
+                      : "Dërgo përgjigjen"}
+                </button>
+              </form>
+            </>
+          )}
+        </article>
+      </section>
+    );
   }
 
   function renderSponsorshipRequests() {
@@ -1889,6 +2088,7 @@ function ManagerDashboard() {
     if (activePage === "Sponsorship Requests") return renderSponsorshipRequests();
     if (activePage === "Ticket Management") return renderTickets();
     if (activePage === "Feedback") return renderFeedback();
+    if (activePage === "Contact Messages") return renderContactMessages();
     if (activePage === "Certificates") return renderCertificates();
     if (activePage === "Coupons") return renderCoupons();
     if (activePage === "Reports") return renderReports();

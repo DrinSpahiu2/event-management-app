@@ -236,6 +236,12 @@ app.use("/api/coupons", couponRoutes);
 const managerSponsorshipRoutes = require("./routes/managerSponsorshipRoutes");
 app.use("/api/manager/sponsorships", managerSponsorshipRoutes);
 
+// Contact form (public) + manager inbox
+const contactRoutes = require("./routes/contactRoutes");
+app.use("/api/contact", contactRoutes);
+const managerContactRoutes = require("./routes/managerContactRoutes");
+app.use("/api/manager/contact-messages", managerContactRoutes);
+
 // --- START SERVER ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

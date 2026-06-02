@@ -8,16 +8,48 @@ function Contact() {
     subject: "",
     message: "",
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState({ type: "", text: "" });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Message sent!");
-    console.log(form);
+    setSubmitting(true);
+    setStatus({ type: "", text: "" });
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          subject: form.subject,
+          message: form.message,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Mesazhi nuk u dërgua.");
+      }
+      setStatus({
+        type: "success",
+        text: data.message || "Mesazhi u dërgua me sukses!",
+      });
+      setForm({ name: "", email: "", subject: "", message: "" });
+    } catch (err) {
+      setStatus({
+        type: "error",
+        text:
+          err.message ||
+          "Nuk u lidh me serverin. Sigurohu që backend-i është duke punuar.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -126,15 +158,26 @@ function Contact() {
                 className="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-red-500/60"
               />
 
+              {status.text ? (
+                <p
+                  className={`text-sm ${
+                    status.type === "success" ? "text-emerald-300" : "text-rose-300"
+                  }`}
+                >
+                  {status.text}
+                </p>
+              ) : null}
+
               <div className="flex items-center justify-between gap-4 pt-2">
                 <p className="text-xs text-white/50">
                   We reply within 24 hours.
                 </p>
                 <button
                   type="submit"
-                  className="rounded-md bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-500"
+                  disabled={submitting}
+                  className="rounded-md bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
                 >
-                  Send Message
+                  {submitting ? "Sending..." : "Send Message"}
                 </button>
               </div>
             </form>
