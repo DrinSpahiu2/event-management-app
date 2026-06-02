@@ -76,6 +76,15 @@ function ManagerDashboard() {
   const [feedbacksLoading, setFeedbacksLoading] = useState(false);
   const [feedbacksError, setFeedbacksError] = useState("");
 
+  const [dashboardStats, setDashboardStats] = useState({
+    futureEventsCount: 0,
+    soldTickets: 0,
+    income: 0,
+    futureEvents: [],
+  });
+  const [dashboardStatsLoading, setDashboardStatsLoading] = useState(true);
+  const [dashboardStatsError, setDashboardStatsError] = useState("");
+
   const emptyEventForm = () => ({
     titulli: "",
     pershkrimi: "",
@@ -150,6 +159,30 @@ function ManagerDashboard() {
     }
   }, []);
 
+  const loadDashboardStats = useCallback(async () => {
+    setDashboardStatsLoading(true);
+    setDashboardStatsError("");
+    try {
+      const res = await fetch("/api/dashboard/stats");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gabim");
+      setDashboardStats(data);
+    } catch (err) {
+      setDashboardStatsError(
+        err.message ||
+          "Nuk u lidh me serverin. Nis backend-in (npm run dev në backend).",
+      );
+      setDashboardStats({
+        futureEventsCount: 0,
+        soldTickets: 0,
+        income: 0,
+        futureEvents: [],
+      });
+    } finally {
+      setDashboardStatsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadEvents();
     loadTickets();
@@ -169,7 +202,13 @@ function ManagerDashboard() {
         // Keep empty arrays if backend isn't wired yet.
       }
     })();
-  }, [loadEvents, loadTickets, loadSpeakers, loadManagerFeedbacks]);
+  }, [
+    loadEvents,
+    loadTickets,
+    loadSpeakers,
+    loadManagerFeedbacks,
+    loadDashboardStats,
+  ]);
 
   const [userForm, setUserForm] = useState({
     name: "",
@@ -537,6 +576,10 @@ function ManagerDashboard() {
         <section className="my-4 text-sm text-[#97a2b6]">
           <p>Home / Manager / Dashboard</p>
         </section>
+
+        {dashboardStatsError ? (
+          <p className="my-2 text-sm text-amber-200">{dashboardStatsError}</p>
+        ) : null}
 
         <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {dashboardCards.map((card) => (
