@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 
 const sidebarLinks = [
   "Dashboard",
@@ -26,6 +28,14 @@ function Badge({ tone = "neutral", children }) {
 
 function SpeakerDashboard() {
   const [activePage, setActivePage] = useState("Dashboard");
+  const navigate = useNavigate();
+
+  const clearSession = () => {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userRole");
+  };
   const [assignedUpcomingEvents, setAssignedUpcomingEvents] = useState([]);
   const [speakerPastEvents, setSpeakerPastEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -704,6 +714,16 @@ function SpeakerDashboard() {
               SP
             </span>
             <span className="text-sm text-[#f3f6fb]">Speaker</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearSession();
+                navigate("/signin");
+              }}
+              className="ml-3 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition"
+            >
+              Logout
+            </button>
           </div>
         </header>
 

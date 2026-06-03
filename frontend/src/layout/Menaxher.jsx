@@ -8,6 +8,9 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
 
+import { useNavigate } from "react-router-dom";
+
+
 const sidebarLinks = [
   "Dashboard",
   "Event Control",
@@ -65,6 +68,14 @@ function statusPill(status) {
 
 function ManagerDashboard() {
   const [activePage, setActivePage] = useState("Dashboard");
+  const navigate = useNavigate();
+
+  const clearSession = () => {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userRole");
+  };
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventMessage, setEventMessage] = useState("");
@@ -2138,6 +2149,16 @@ function ManagerDashboard() {
               MG
             </span>
             <span className="text-sm text-[#f3f6fb]">Manager</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearSession();
+                navigate("/signin");
+              }}
+              className="ml-3 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition"
+            >
+              Logout
+            </button>
           </div>
         </header>
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const sidebarLinks = ["Dashboard", "Sponsors", "Schedule List", "Upcoming Event"];
 
@@ -107,7 +108,16 @@ async function fetchJson(url, options) {
 }
 
 function Sponsor() {
+  const navigate = useNavigate();
   const userEmail = localStorage.getItem("userEmail") || "";
+
+  const clearSession = () => {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userRole");
+  };
+
 
   const [activePage, setActivePage] = useState("Sponsors");
   const [query, setQuery] = useState("");
@@ -960,6 +970,16 @@ function Sponsor() {
               SP
             </span>
             <span className="text-sm text-[#f3f6fb]">Sponsor Portal</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearSession();
+                navigate("/signin");
+              }}
+              className="ml-3 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition"
+            >
+              Logout
+            </button>
           </div>
         </header>
 

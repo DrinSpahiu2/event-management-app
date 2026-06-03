@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import AdminUsersList from "./AdminUsersList.jsx"; // 
+
 import AdminEvents from "./AdminEvents.jsx";
+
+const clearSession = () => {
+  localStorage.removeItem("isLoggedIn");
+  localStorage.removeItem("userId");
+  localStorage.removeItem("userEmail");
+  localStorage.removeItem("userRole");
+};
 const sidebarLinks = [
   "Dashboard",
   "Users List",
@@ -22,6 +32,8 @@ function formatIncome(value) {
 
 function AdminDashboard() {
   const [activeView, setActiveView] = useState("Dashboard");
+  const navigate = useNavigate();
+
   const [dashboardStats, setDashboardStats] = useState({
     futureEventsCount: 0,
     soldTickets: 0,
@@ -36,7 +48,8 @@ function AdminDashboard() {
   }, []);
 
   async function loadDashboardStats() {
-    setStatsLoading(true);
+     setStatsLoading(true);
+
     setStatsError("");
     try {
       const res = await fetch("/api/dashboard/stats");
@@ -92,6 +105,7 @@ function AdminDashboard() {
 
         <nav className="flex flex-col gap-2.5" aria-label="Sidebar Navigation">
           {sidebarLinks.map((item) => (
+
             <button
               key={item}
               onClick={() => setActiveView(item)} // 👈 Changes view when sidebar item is clicked
@@ -109,6 +123,7 @@ function AdminDashboard() {
       </aside>
 
       <main className="bg-[#151a23] p-4 sm:p-5 lg:p-6">
+        {/* Keep logout always visible (also works if something pushes content down) */}
         <header className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
           <div className="w-full max-w-[520px]">
             <input
@@ -124,6 +139,16 @@ function AdminDashboard() {
               JS
             </span>
             <span className="text-sm text-[#f3f6fb]">Jhon Smith</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearSession();
+                navigate("/signin");
+              }}
+              className="ml-3 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition"
+            >
+              Logout
+            </button>
           </div>
         </header>
 
