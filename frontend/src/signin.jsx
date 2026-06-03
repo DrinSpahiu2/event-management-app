@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { tokenUtils } from "./utils/tokenUtils";
 import heroImg from "./assets/hero.png";
 
 function IconEmail(props) {
@@ -122,11 +123,18 @@ export default function SignIn() {
         throw new Error(data.error || "Sign in failed");
       }
 
-      // Save user session details
+      // Save JWT token and user session details
+      tokenUtils.setToken(data.token); // Save JWT token
+      tokenUtils.setUser({
+        userId: data.userId,
+        email: data.email,
+        emri: data.emri,
+        role: data.role,
+      });
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("userId", data.userId);
       localStorage.setItem("userEmail", data.email);
-      localStorage.setItem("userRole", data.role); // Save text string instead of numeric ID
+      localStorage.setItem("userRole", data.role);
 
       setMessage("✅ Sign in successful!");
 

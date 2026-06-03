@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const app = express();
@@ -11,6 +12,9 @@ app.use(express.json());
 
 // --- DATABASE CONNECTION WITH SEQUELIZE ---
 const db = require("./models");
+
+// --- IMPORT AUTH MIDDLEWARE ---
+const { verifyToken } = require("./utils/authMiddleware");
 
 db.sequelize
   .authenticate()
@@ -114,8 +118,20 @@ app.post("/api/signin", async (req, res) => {
 
     const roleName = user.userType ? user.userType.emri : "Client";
 
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: roleName,
+      },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "7d" }
+    );
+
     res.json({
       message: "Sign in successful",
+      token, // Add token here
       userId: user.id,
       email: user.email,
       emri: user.emri,
@@ -125,6 +141,27 @@ app.post("/api/signin", async (req, res) => {
   } catch (error) {
     console.error("❌ Sign in error:", error.message);
     res.status(500).json({ error: "Failed to sign in: " + error.message });
+  }
+});
+
+// --- PROTECTED ROUTE EXAMPLE: Get Current User Profile ---
+app.get("/api/profile", verifyToken, async (req, res) => {
+  try {
+    const user = await db.User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({
+      id: user.id,
+      emri: user.emri,
+      mbiemri: user.mbiemri,
+      email: user.email,
+      telefoni: user.telefoni,
+      statusi: user.statusi,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching profile:", error.message);
+    res.status(500).json({ error: "Failed to fetch profile" });
   }
 });
 
