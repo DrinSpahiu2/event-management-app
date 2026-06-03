@@ -25,7 +25,16 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: "pending",
       },
     },
-    { sequelize, modelName: "Registration", tableName: "Registrations" },
+    {
+      sequelize,
+      modelName: "Registration",
+      tableName: "Registrations",
+      timestamps: false,
+    },
+
+
   );
   return Registration;
 };
+
+
