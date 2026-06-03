@@ -219,6 +219,7 @@ const managerScheduleRoutes = require("./routes/managerScheduleRoutes");
 const managerUsersCrudRoutes = require("./routes/managerUsersCrudRoutes");
 const managerEventsRoutes = require("./routes/managerEventsRoutes");
 const managerEventCategoriesRoutes = require("./routes/managerEventCategoriesRoutes");
+const managerPurchasesRoutes = require("./routes/managerPurchasesRoutes");
 
 app.use("/api/manager", managerRoutes);
 app.use("/api/manager/users", managerUsersRoutes);
@@ -226,6 +227,8 @@ app.use("/api/manager/users-crud", managerUsersCrudRoutes);
 app.use("/api/manager/schedule", managerScheduleRoutes);
 app.use("/api/manager/events-crud", managerEventsRoutes);
 app.use("/api/manager/event-categories", managerEventCategoriesRoutes);
+app.use("/api/manager/purchases", managerPurchasesRoutes);
+
 
 // Speaker Routes
 const speakerRoutes = require("./routes/speakerRoutes");
@@ -280,7 +283,7 @@ const managerContactRoutes = require("./routes/managerContactRoutes");
 app.use("/api/manager/contact-messages", managerContactRoutes);
 
 // --- START SERVER ---
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

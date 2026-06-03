@@ -4,8 +4,11 @@ import { useNavigate } from "react-router-dom";
 import AdminUsersList from "./AdminUsersList.jsx"; // 
 
 import AdminEvents from "./AdminEvents.jsx";
+import ManagerPurchases from "./ManagerPurchases.jsx";
+
 
 const clearSession = () => {
+
   localStorage.removeItem("isLoggedIn");
   localStorage.removeItem("userId");
   localStorage.removeItem("userEmail");
@@ -19,6 +22,7 @@ const sidebarLinks = [
   "Upcoming Event",
   "Calendar",
   "Venue",
+  "Purchases",
   "Profile",
 ];
 
@@ -161,7 +165,10 @@ function AdminDashboard() {
           <AdminUsersList />
         ) : activeView === "Upcoming Event" ? (
           <AdminEvents />
+        ) : activeView === "Purchases" ? (
+          <ManagerPurchases />
         ) : activeView === "Dashboard" ? (
+
           <>
             {statsError ? (
               <div className="mb-3 flex flex-wrap items-center gap-3">
