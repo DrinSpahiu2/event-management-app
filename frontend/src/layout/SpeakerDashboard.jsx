@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-
 const sidebarLinks = [
   "Dashboard",
   "Event List",
@@ -20,7 +19,9 @@ function Badge({ tone = "neutral", children }) {
         : "border-[#2b3446] bg-[#11161f] text-[#b6c0cf]";
 
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[12px] ${toneStyles}`}>
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[12px] ${toneStyles}`}
+    >
       {children}
     </span>
   );
@@ -28,6 +29,7 @@ function Badge({ tone = "neutral", children }) {
 
 function SpeakerDashboard() {
   const [activePage, setActivePage] = useState("Dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const clearSession = () => {
@@ -41,12 +43,22 @@ function SpeakerDashboard() {
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState("");
   const [materials, setMaterials] = useState([
-    { name: "Keynote Deck.pdf", type: "Slides", updated: "Apr 14, 2026", url: null },
+    {
+      name: "Keynote Deck.pdf",
+      type: "Slides",
+      updated: "Apr 14, 2026",
+      url: null,
+    },
     { name: "Demo Repo.zip", type: "Code", updated: "Apr 18, 2026", url: null },
-    { name: "Speaker Bio.docx", type: "Docs", updated: "Apr 22, 2026", url: null },
+    {
+      name: "Speaker Bio.docx",
+      type: "Docs",
+      updated: "Apr 22, 2026",
+      url: null,
+    },
   ]);
   const [materialObjectUrls, setMaterialObjectUrls] = useState([]);
-  
+
   useEffect(() => {
     return () => {
       materialObjectUrls.forEach((u) => URL.revokeObjectURL(u));
@@ -77,14 +89,15 @@ function SpeakerDashboard() {
   }, []);
 
   const acceptedUpcoming = useMemo(
-    () => assignedUpcomingEvents.filter((e) => e.assignmentStatus === "Accepted"),
+    () =>
+      assignedUpcomingEvents.filter((e) => e.assignmentStatus === "Accepted"),
     [assignedUpcomingEvents],
   );
   const pendingUpcoming = useMemo(
-    () => assignedUpcomingEvents.filter((e) => e.assignmentStatus === "Pending"),
+    () =>
+      assignedUpcomingEvents.filter((e) => e.assignmentStatus === "Pending"),
     [assignedUpcomingEvents],
   );
-
 
   const statsFromPastEvents = useMemo(() => {
     const totalAttendees = speakerPastEvents.reduce(
@@ -105,10 +118,26 @@ function SpeakerDashboard() {
 
   const speakerStatCards = useMemo(
     () => [
-      { label: "Upcoming Talks", value: String(assignedUpcomingEvents.length), icon: "🎤" },
-      { label: "Materials Uploaded", value: String(materials.length), icon: "📎" },
-      { label: "Past Events", value: String(speakerPastEvents.length), icon: "✅" },
-      { label: "Avg. Rating", value: statsFromPastEvents.avgRating.toFixed(1), icon: "⭐" },
+      {
+        label: "Upcoming Talks",
+        value: String(assignedUpcomingEvents.length),
+        icon: "🎤",
+      },
+      {
+        label: "Materials Uploaded",
+        value: String(materials.length),
+        icon: "📎",
+      },
+      {
+        label: "Past Events",
+        value: String(speakerPastEvents.length),
+        icon: "✅",
+      },
+      {
+        label: "Avg. Rating",
+        value: statsFromPastEvents.avgRating.toFixed(1),
+        icon: "⭐",
+      },
     ],
     [
       assignedUpcomingEvents.length,
@@ -118,7 +147,10 @@ function SpeakerDashboard() {
     ],
   );
 
-  const breadcrumb = useMemo(() => `Home / Speaker / ${activePage}`, [activePage]);
+  const breadcrumb = useMemo(
+    () => `Home / Speaker / ${activePage}`,
+    [activePage],
+  );
 
   const calendarDays = useMemo(() => {
     const labels = ["S", "M", "T", "W", "T", "F", "S"];
@@ -209,7 +241,9 @@ function SpeakerDashboard() {
         <section className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1fr]">
           <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
             <div className="mb-3.5 flex items-center justify-between">
-              <h3 className="m-0 text-xl text-[#f4f7fb]">Upcoming Events (Assigned to you)</h3>
+              <h3 className="m-0 text-xl text-[#f4f7fb]">
+                Upcoming Events (Assigned to you)
+              </h3>
               <div className="flex items-center gap-2">
                 <Badge tone="warning">{pendingUpcoming.length} pending</Badge>
                 <Badge tone="success">{acceptedUpcoming.length} accepted</Badge>
@@ -217,12 +251,16 @@ function SpeakerDashboard() {
             </div>
             <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
               {eventsLoading ? (
-                <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar eventet...</li>
+                <li className="text-[13px] text-[#95a2ba]">
+                  Duke ngarkuar eventet...
+                </li>
               ) : null}
               {eventsError ? (
                 <li className="text-[13px] text-rose-300">{eventsError}</li>
               ) : null}
-              {!eventsLoading && !eventsError && assignedUpcomingEvents.length === 0 ? (
+              {!eventsLoading &&
+              !eventsError &&
+              assignedUpcomingEvents.length === 0 ? (
                 <li className="text-[13px] text-[#95a2ba]">
                   Nuk ke evente të ardhshme të caktuara.
                 </li>
@@ -233,15 +271,20 @@ function SpeakerDashboard() {
                   className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
                 >
                   <div className="min-w-0">
-                    <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">{event.title}</h4>
+                    <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">
+                      {event.title}
+                    </h4>
                     {event.tema ? (
-                      <p className="mt-1 text-[13px] text-[#7dd3a8]">Tema: {event.tema}</p>
+                      <p className="mt-1 text-[13px] text-[#7dd3a8]">
+                        Tema: {event.tema}
+                      </p>
                     ) : null}
                     <p className="mt-1 text-[13px] text-[#95a2ba]">
                       {event.date} · {event.time} · {event.location}
                     </p>
                     <p className="mt-1 text-[13px] text-[#95a2ba]">
-                      Assigned by {event.assignedBy} · Requested {event.requestedOn}
+                      Assigned by {event.assignedBy} · Requested{" "}
+                      {event.requestedOn}
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">
@@ -289,7 +332,9 @@ function SpeakerDashboard() {
             </div>
             <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
               {!eventsLoading && speakerPastEvents.length === 0 ? (
-                <li className="text-[13px] text-[#95a2ba]">Nuk ke evente të kaluara.</li>
+                <li className="text-[13px] text-[#95a2ba]">
+                  Nuk ke evente të kaluara.
+                </li>
               ) : null}
               {speakerPastEvents.map((event) => (
                 <li
@@ -297,9 +342,13 @@ function SpeakerDashboard() {
                   className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
                 >
                   <div className="min-w-0">
-                    <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">{event.title}</h4>
+                    <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">
+                      {event.title}
+                    </h4>
                     {event.tema ? (
-                      <p className="mt-1 text-[13px] text-[#7dd3a8]">Tema: {event.tema}</p>
+                      <p className="mt-1 text-[13px] text-[#7dd3a8]">
+                        Tema: {event.tema}
+                      </p>
                     ) : null}
                     <p className="mt-1 text-[13px] text-[#95a2ba]">
                       {event.date} · {event.time} · {event.location}
@@ -328,7 +377,8 @@ function SpeakerDashboard() {
 
             <div className="rounded-[10px] border border-[#2b3446] bg-[#171d27] p-4">
               <p className="m-0 text-[13px] text-[#95a2ba]">
-                Upload slides, code, handouts, and demo assets for your upcoming sessions.
+                Upload slides, code, handouts, and demo assets for your upcoming
+                sessions.
               </p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
@@ -378,7 +428,9 @@ function SpeakerDashboard() {
                   className="flex items-center justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
                 >
                   <div className="min-w-0">
-                    <p className="m-0 truncate text-[14px] text-[#f8fbff]">{m.name}</p>
+                    <p className="m-0 truncate text-[14px] text-[#f8fbff]">
+                      {m.name}
+                    </p>
                     <p className="mt-1 text-[12px] text-[#95a2ba]">
                       {m.type} · Updated {m.updated}
                     </p>
@@ -399,7 +451,9 @@ function SpeakerDashboard() {
                       onClick={() => {
                         if (m.url) {
                           URL.revokeObjectURL(m.url);
-                          setMaterialObjectUrls((prev) => prev.filter((u) => u !== m.url));
+                          setMaterialObjectUrls((prev) =>
+                            prev.filter((u) => u !== m.url),
+                          );
                         }
                         setMaterials((prev) => prev.filter((x) => x !== m));
                       }}
@@ -427,7 +481,10 @@ function SpeakerDashboard() {
             <div className="rounded-[10px] border border-[#2b3446] bg-[#171d27] p-4">
               <div className="grid grid-cols-7 gap-2">
                 {calendarDays.labels.map((d) => (
-                  <div key={d} className="text-center text-[12px] font-semibold text-[#8f9ab0]">
+                  <div
+                    key={d}
+                    className="text-center text-[12px] font-semibold text-[#8f9ab0]"
+                  >
                     {d}
                   </div>
                 ))}
@@ -456,27 +513,34 @@ function SpeakerDashboard() {
           <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
             <div className="mb-3.5 flex items-center justify-between">
               <h3 className="m-0 text-xl text-[#f4f7fb]">Next Sessions</h3>
-              <Badge tone="warning">{acceptedUpcoming.length > 0 ? "Accepted" : "No accepted yet"}</Badge>
+              <Badge tone="warning">
+                {acceptedUpcoming.length > 0 ? "Accepted" : "No accepted yet"}
+              </Badge>
             </div>
             <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
-              {(acceptedUpcoming.length ? acceptedUpcoming : assignedUpcomingEvents)
+              {(acceptedUpcoming.length
+                ? acceptedUpcoming
+                : assignedUpcomingEvents
+              )
                 .slice(0, 3)
                 .map((event) => (
-                <li
-                  key={event.id}
-                  className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
-                >
-                  <div className="min-w-0">
-                    <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">{event.title}</h4>
-                    <p className="mt-1 text-[13px] text-[#95a2ba]">
-                      {event.date} · {event.time}
-                    </p>
-                  </div>
-                  <Badge tone={assignmentTone(event.assignmentStatus)}>
-                    {assignmentLabel(event.assignmentStatus)}
-                  </Badge>
-                </li>
-              ))}
+                  <li
+                    key={event.id}
+                    className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
+                  >
+                    <div className="min-w-0">
+                      <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">
+                        {event.title}
+                      </h4>
+                      <p className="mt-1 text-[13px] text-[#95a2ba]">
+                        {event.date} · {event.time}
+                      </p>
+                    </div>
+                    <Badge tone={assignmentTone(event.assignmentStatus)}>
+                      {assignmentLabel(event.assignmentStatus)}
+                    </Badge>
+                  </li>
+                ))}
             </ul>
           </article>
         </section>
@@ -517,7 +581,9 @@ function SpeakerDashboard() {
             </div>
             <div className="grid grid-cols-1 gap-3">
               <div className="rounded-[10px] border border-[#293346] bg-[#161d27] p-3">
-                <p className="m-0 text-[13px] text-[#95a2ba]">Total attendees (past)</p>
+                <p className="m-0 text-[13px] text-[#95a2ba]">
+                  Total attendees (past)
+                </p>
                 <p className="mt-1 text-[26px] font-semibold text-[#f8fbff]">
                   {statsFromPastEvents.totalAttendees.toLocaleString("en-US")}
                 </p>
@@ -529,7 +595,9 @@ function SpeakerDashboard() {
                 </p>
               </div>
               <div className="rounded-[10px] border border-[#293346] bg-[#161d27] p-3">
-                <p className="m-0 text-[13px] text-[#95a2ba]">Past events counted</p>
+                <p className="m-0 text-[13px] text-[#95a2ba]">
+                  Past events counted
+                </p>
                 <p className="mt-1 text-[26px] font-semibold text-[#f8fbff]">
                   {statsFromPastEvents.eventsCount}
                 </p>
@@ -554,7 +622,9 @@ function SpeakerDashboard() {
               className="flex items-center justify-between rounded-xl border border-[#283143] bg-[#1b212c] p-4"
             >
               <div>
-                <h2 className="m-0 text-[34px] leading-none text-white">{card.value}</h2>
+                <h2 className="m-0 text-[34px] leading-none text-white">
+                  {card.value}
+                </h2>
                 <p className="mt-1.5 text-sm text-[#9ca6b7]">{card.label}</p>
               </div>
               <span
@@ -605,7 +675,9 @@ function SpeakerDashboard() {
             </div>
             <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
               {!eventsLoading && assignedUpcomingEvents.length === 0 ? (
-                <li className="text-[13px] text-[#95a2ba]">Nuk ke sesione të ardhshme.</li>
+                <li className="text-[13px] text-[#95a2ba]">
+                  Nuk ke sesione të ardhshme.
+                </li>
               ) : null}
               {assignedUpcomingEvents.slice(0, 3).map((event) => (
                 <li
@@ -613,9 +685,13 @@ function SpeakerDashboard() {
                   className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
                 >
                   <div className="min-w-0">
-                    <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">{event.title}</h4>
+                    <h4 className="m-0 truncate text-[15px] text-[#f8fbff]">
+                      {event.title}
+                    </h4>
                     {event.tema ? (
-                      <p className="mt-1 text-[13px] text-[#7dd3a8]">Tema: {event.tema}</p>
+                      <p className="mt-1 text-[13px] text-[#7dd3a8]">
+                        Tema: {event.tema}
+                      </p>
                     ) : null}
                     <p className="mt-1 text-[13px] text-[#95a2ba]">
                       {event.date} · {event.time} · {event.location}
@@ -674,13 +750,37 @@ function SpeakerDashboard() {
 
   return (
     <div className="min-h-screen grid grid-cols-1 bg-[#10141d] text-slate-100 lg:grid-cols-[250px_1fr]">
-      <aside className="flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4">
-        <h1 className="m-0 flex items-center gap-2 text-2xl font-semibold text-[#1f1f1f] lg:text-[24px]">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#1f1f1f] text-base text-[#ff9f1a]">
-            ◎
-          </span>
-          <span>Event EMS</span>
-        </h1>
+      <aside
+        className={`fixed left-0 top-0 z-40 h-screen w-64 transform transition-transform duration-300 lg:relative lg:z-auto lg:h-auto lg:w-auto lg:translate-x-0 ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
+        } flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4`}
+      >
+        <div className="flex items-center justify-between">
+          <h1 className="m-0 flex items-center gap-2 text-2xl font-semibold text-[#1f1f1f] lg:text-[24px]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#1f1f1f] text-base text-[#ff9f1a]">
+              ◎
+            </span>
+            <span>Event EMS</span>
+          </h1>
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="lg:hidden rounded-md p-1 text-[#1f1f1f] hover:bg-white/20"
+            aria-label="Close menu"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
 
         <nav className="flex flex-col gap-2.5" aria-label="Sidebar Navigation">
           {sidebarLinks.map((item) => (
@@ -690,7 +790,10 @@ function SpeakerDashboard() {
                 item === activePage ? "bg-[#10141d]/20 font-semibold" : ""
               }`}
               type="button"
-              onClick={() => setActivePage(item)}
+              onClick={() => {
+                setActivePage(item);
+                setMenuOpen(false);
+              }}
             >
               {item}
             </button>
@@ -698,9 +801,34 @@ function SpeakerDashboard() {
         </nav>
       </aside>
 
-      <main className="bg-[#151a23] p-4 sm:p-5 lg:p-6">
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      <main className="relative bg-[#151a23] p-4 sm:p-5 lg:p-6">
         <header className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-          <div className="w-full max-w-[520px]">
+          <div className="flex items-center gap-3 w-full max-w-[520px]">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="lg:hidden rounded-md p-2 text-white hover:bg-white/10 bg-white/5 border border-white/10"
+              aria-label="Toggle menu"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 4a1 1 0 000 2h12a1 1 0 100-2H4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
             <input
               className="w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none placeholder:text-[#798194] focus:border-[#3b4760]"
               type="text"
@@ -708,19 +836,21 @@ function SpeakerDashboard() {
               aria-label="Search"
             />
           </div>
-          <div className="flex items-center justify-end gap-2.5 text-sm text-[#b6c0cf]">
-            <span>English</span>
-            <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-gradient-to-br from-[#44b7ff] to-[#6ad3ff] text-[13px] font-bold text-[#04131f]">
+          <div className="flex items-center justify-end gap-2.5 text-sm text-[#b6c0cf] w-full">
+            <span className="hidden sm:inline">English</span>
+            <span className="hidden sm:inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-gradient-to-br from-[#44b7ff] to-[#6ad3ff] text-[13px] font-bold text-[#04131f]">
               SP
             </span>
-            <span className="text-sm text-[#f3f6fb]">Speaker</span>
+            <span className="hidden sm:inline text-sm text-[#f3f6fb]">
+              Speaker
+            </span>
             <button
               type="button"
               onClick={() => {
                 clearSession();
                 navigate("/signin");
               }}
-              className="ml-3 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition"
+              className="ml-0 sm:ml-3 rounded-md bg-red-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-red-500 transition"
             >
               Logout
             </button>
@@ -731,7 +861,7 @@ function SpeakerDashboard() {
           renderMain()
         ) : (
           <>
-            <section className="my-4 text-sm text-[#97a2b6]">
+            <section className="my-4 text-xs sm:text-sm text-[#97a2b6]">
               <p>{breadcrumb}</p>
             </section>
             {renderMain()}

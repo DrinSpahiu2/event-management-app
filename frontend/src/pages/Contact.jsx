@@ -10,6 +10,7 @@ function Contact() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: "", text: "" });
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -55,7 +56,7 @@ function Contact() {
   return (
     <div className="min-h-screen bg-[#10141d] text-white">
       {/* Top navigation */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/30 backdrop-blur">
+      <header className="relative sticky top-0 z-50 border-b border-white/10 bg-black/30 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-600/90">
@@ -87,6 +88,41 @@ function Contact() {
             </NavLink>
           </nav>
 
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
+            aria-expanded={menuOpen}
+            className="md:hidden rounded-md p-2 text-white hover:bg-white/6 bg-white/5 border border-white/10"
+          >
+            {menuOpen ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 4a1 1 0 000 2h12a1 1 0 100-2H4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+          </button>
+
           <NavLink
             to="/signin"
             className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
@@ -94,6 +130,69 @@ function Contact() {
             Get Started
           </NavLink>
         </div>
+
+        {menuOpen && (
+          <nav className="md:hidden absolute left-0 right-0 top-full z-40 border-t border-white/10 bg-black/80 backdrop-blur">
+            <div className="mx-auto max-w-7xl px-6 py-4">
+              <ul className="flex flex-col gap-2">
+                <li>
+                  <NavLink
+                    to="/"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md hover:bg-white/5"
+                  >
+                    Home
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/about"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md hover:bg-white/5"
+                  >
+                    About
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/about#speakers"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md hover:bg-white/5"
+                  >
+                    Speakers
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/about#insights"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md hover:bg-white/5"
+                  >
+                    Insights
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/contact"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md hover:bg-white/5"
+                  >
+                    Contact
+                  </NavLink>
+                </li>
+                <li className="pt-2">
+                  <NavLink
+                    to="/signin"
+                    onClick={() => setMenuOpen(false)}
+                    className="block rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+                  >
+                    Get Started
+                  </NavLink>
+                </li>
+              </ul>
+            </div>
+          </nav>
+        )}
       </header>
 
       {/* Page title */}
@@ -161,7 +260,9 @@ function Contact() {
               {status.text ? (
                 <p
                   className={`text-sm ${
-                    status.type === "success" ? "text-emerald-300" : "text-rose-300"
+                    status.type === "success"
+                      ? "text-emerald-300"
+                      : "text-rose-300"
                   }`}
                 >
                   {status.text}
@@ -219,9 +320,7 @@ function Contact() {
                 </div>
                 <div>
                   <div className="text-sm font-semibold">Location</div>
-                  <div className="mt-1 text-sm text-white/60">
-                   Prishtine
-                  </div>
+                  <div className="mt-1 text-sm text-white/60">Prishtine</div>
                 </div>
               </div>
 
@@ -379,13 +478,15 @@ function Contact() {
                 </div>
               </div>
               <p className="mt-4 text-sm leading-relaxed text-white/60">
-                A modern platform for planning, running, and learning from events
-                with confidence.
+                A modern platform for planning, running, and learning from
+                events with confidence.
               </p>
             </div>
 
             <div>
-              <div className="text-sm font-semibold text-white">Useful Links</div>
+              <div className="text-sm font-semibold text-white">
+                Useful Links
+              </div>
               <ul className="mt-4 space-y-3 text-sm text-white/60">
                 <li>
                   <NavLink to="/about" className="hover:text-white">

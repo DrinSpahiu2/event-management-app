@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const sidebarLinks = ["Dashboard", "Sponsors", "Schedule List", "Upcoming Event"];
+const sidebarLinks = [
+  "Dashboard",
+  "Sponsors",
+  "Schedule List",
+  "Upcoming Event",
+];
 
 const tiers = [
   {
@@ -9,7 +14,11 @@ const tiers = [
     name: "Starter",
     priceLabel: "$500",
     blurb: "Perfect for small teams testing the waters.",
-    perks: ["Logo on sponsors wall", "1 social media mention", "1 attendee pass"],
+    perks: [
+      "Logo on sponsors wall",
+      "1 social media mention",
+      "1 attendee pass",
+    ],
     accent: "from-[#44b7ff] to-[#6ad3ff]",
   },
   {
@@ -17,7 +26,11 @@ const tiers = [
     name: "Growth",
     priceLabel: "$1,500",
     blurb: "Get stronger visibility and more attendees.",
-    perks: ["Medium logo placement", "3 social media mentions", "3 attendee passes"],
+    perks: [
+      "Medium logo placement",
+      "3 social media mentions",
+      "3 attendee passes",
+    ],
     accent: "from-[#ef4360] to-[#f58b63]",
     featured: true,
   },
@@ -102,7 +115,9 @@ async function fetchJson(url, options) {
     );
   }
   if (!res.ok) {
-    throw new Error(data?.error || data?.message || `Request failed (${res.status})`);
+    throw new Error(
+      data?.error || data?.message || `Request failed (${res.status})`,
+    );
   }
   return data;
 }
@@ -110,6 +125,7 @@ async function fetchJson(url, options) {
 function Sponsor() {
   const navigate = useNavigate();
   const userEmail = localStorage.getItem("userEmail") || "";
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const clearSession = () => {
     localStorage.removeItem("isLoggedIn");
@@ -117,7 +133,6 @@ function Sponsor() {
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userRole");
   };
-
 
   const [activePage, setActivePage] = useState("Sponsors");
   const [query, setQuery] = useState("");
@@ -130,7 +145,9 @@ function Sponsor() {
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleError, setScheduleError] = useState("");
   const [selectedEventId, setSelectedEventId] = useState("");
-  const [selectedTierId, setSelectedTierId] = useState(tiers[1]?.id ?? tiers[0]?.id);
+  const [selectedTierId, setSelectedTierId] = useState(
+    tiers[1]?.id ?? tiers[0]?.id,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitMessage, setSubmitMessage] = useState("");
@@ -207,14 +224,10 @@ function Sponsor() {
     }
   }, [activePage, loadSchedule]);
 
-  const upcomingEvents = useMemo(
-    () => events.filter(isUpcoming),
-    [events],
-  );
+  const upcomingEvents = useMemo(() => events.filter(isUpcoming), [events]);
 
   const filteredEvents = useMemo(() => {
-    const source =
-      activePage === "Upcoming Event" ? upcomingEvents : events;
+    const source = activePage === "Upcoming Event" ? upcomingEvents : events;
     const q = query.trim().toLowerCase();
     if (!q) return source;
     return source.filter((e) =>
@@ -271,7 +284,13 @@ function Sponsor() {
         icon: "🗓️",
       },
     ],
-    [events.length, requests.length, upcomingEvents.length, schedule.length, scheduleLoading],
+    [
+      events.length,
+      requests.length,
+      upcomingEvents.length,
+      schedule.length,
+      scheduleLoading,
+    ],
   );
 
   const breadcrumb = useMemo(() => `Home / ${activePage}`, [activePage]);
@@ -302,9 +321,7 @@ function Sponsor() {
       return;
     }
     if (
-      !window.confirm(
-        "Delete this sponsorship request? This cannot be undone.",
-      )
+      !window.confirm("Delete this sponsorship request? This cannot be undone.")
     ) {
       return;
     }
@@ -407,7 +424,9 @@ function Sponsor() {
   function renderMySponsorships() {
     return (
       <article className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
-        <h2 className="m-0 text-lg text-[#f4f7fb]">Your sponsorship requests</h2>
+        <h2 className="m-0 text-lg text-[#f4f7fb]">
+          Your sponsorship requests
+        </h2>
         <p className="m-0 mt-1 text-[13px] text-[#8f9ab0]">
           Edit or delete requests you have already submitted.
         </p>
@@ -428,23 +447,23 @@ function Sponsor() {
                   <p className="m-0 text-sm font-medium text-[#f8fbff]">
                     {req.eventTitle}
                   </p>
-                    <p className="m-0 mt-0.5 text-[12px] text-[#95a2ba]">
-                      {req.tier} · ${req.budget} ·{" "}
-                      {formatSubmittedDate(req.submittedAt)}
-                    </p>
-                    <p className="m-0 mt-1">
-                      <span
-                        className={`inline-block rounded-full border px-2 py-0.5 text-[11px] ${
-                          req.status === "accepted"
-                            ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-200"
-                            : req.status === "rejected"
-                              ? "border-rose-400/25 bg-rose-400/10 text-rose-200"
-                              : "border-amber-400/25 bg-amber-400/10 text-amber-200"
-                        }`}
-                      >
-                        {req.statusLabel || "Pending"}
-                      </span>
-                    </p>
+                  <p className="m-0 mt-0.5 text-[12px] text-[#95a2ba]">
+                    {req.tier} · ${req.budget} ·{" "}
+                    {formatSubmittedDate(req.submittedAt)}
+                  </p>
+                  <p className="m-0 mt-1">
+                    <span
+                      className={`inline-block rounded-full border px-2 py-0.5 text-[11px] ${
+                        req.status === "accepted"
+                          ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-200"
+                          : req.status === "rejected"
+                            ? "border-rose-400/25 bg-rose-400/10 text-rose-200"
+                            : "border-amber-400/25 bg-amber-400/10 text-amber-200"
+                      }`}
+                    >
+                      {req.statusLabel || "Pending"}
+                    </span>
+                  </p>
                   {req.eventLocation ? (
                     <p className="m-0 mt-0.5 text-[12px] text-[#8f9ab0]">
                       {req.eventLocation}
@@ -546,7 +565,9 @@ function Sponsor() {
         ) : eventsError ? (
           <p className="text-sm text-red-400">{eventsError}</p>
         ) : filteredEvents.length === 0 ? (
-          <p className="text-sm text-[#8f9ab0]">No upcoming events right now.</p>
+          <p className="text-sm text-[#8f9ab0]">
+            No upcoming events right now.
+          </p>
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {filteredEvents.map((ev) => (
@@ -609,8 +630,12 @@ function Sponsor() {
               <tbody>
                 {filteredSchedule.map((item) => (
                   <tr key={item.id} className="border-b border-[#293346]/60">
-                    <td className="py-2.5 pr-3 text-[#f8fbff]">{item.eventTitle}</td>
-                    <td className="py-2.5 pr-3 text-[#b6c0cf]">{item.session}</td>
+                    <td className="py-2.5 pr-3 text-[#f8fbff]">
+                      {item.eventTitle}
+                    </td>
+                    <td className="py-2.5 pr-3 text-[#b6c0cf]">
+                      {item.session}
+                    </td>
                     <td className="py-2.5 pr-3 text-[#95a2ba]">{item.date}</td>
                     <td className="py-2.5 text-[#95a2ba]">{item.slot}</td>
                   </tr>
@@ -712,7 +737,9 @@ function Sponsor() {
         <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
           <div className="mb-3.5 flex items-start justify-between gap-3">
             <div>
-              <h2 className="m-0 text-xl text-[#f4f7fb]">Sponsorship package</h2>
+              <h2 className="m-0 text-xl text-[#f4f7fb]">
+                Sponsorship package
+              </h2>
               <p className="m-0 mt-1 text-[13px] text-[#8f9ab0]">
                 Select a tier, then submit your details.
               </p>
@@ -751,7 +778,9 @@ function Sponsor() {
                           ) : null}
                         </h3>
                       </div>
-                      <p className="m-0 mt-1 text-[13px] text-[#95a2ba]">{t.blurb}</p>
+                      <p className="m-0 mt-1 text-[13px] text-[#95a2ba]">
+                        {t.blurb}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="m-0 text-[18px] font-semibold text-white">
@@ -812,7 +841,9 @@ function Sponsor() {
             >
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-[12px] text-[#b6c0cf]">Company name</span>
+                  <span className="text-[12px] text-[#b6c0cf]">
+                    Company name
+                  </span>
                   <input
                     required
                     defaultValue={editingRequest?.companyName ?? ""}
@@ -838,7 +869,9 @@ function Sponsor() {
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-[12px] text-[#b6c0cf]">Website (optional)</span>
+                  <span className="text-[12px] text-[#b6c0cf]">
+                    Website (optional)
+                  </span>
                   <input
                     defaultValue={editingRequest?.website ?? ""}
                     className="mt-1 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3 py-2.5 text-sm text-slate-100 outline-none placeholder:text-[#798194] focus:border-[#3b4760]"
@@ -848,13 +881,17 @@ function Sponsor() {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-[12px] text-[#b6c0cf]">Budget (USD)</span>
+                  <span className="text-[12px] text-[#b6c0cf]">
+                    Budget (USD)
+                  </span>
                   <input
                     required
                     min={0}
                     defaultValue={editingRequest?.budget ?? ""}
                     className="mt-1 w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3 py-2.5 text-sm text-slate-100 outline-none placeholder:text-[#798194] focus:border-[#3b4760]"
-                    placeholder={selectedTier?.priceLabel?.replace("$", "") ?? "1500"}
+                    placeholder={
+                      selectedTier?.priceLabel?.replace("$", "") ?? "1500"
+                    }
                     type="number"
                     name="budget"
                   />
@@ -862,7 +899,9 @@ function Sponsor() {
               </div>
 
               <label className="block">
-                <span className="text-[12px] text-[#b6c0cf]">Message (optional)</span>
+                <span className="text-[12px] text-[#b6c0cf]">
+                  Message (optional)
+                </span>
                 <textarea
                   defaultValue={editingRequest?.message ?? ""}
                   className="mt-1 min-h-[90px] w-full resize-none rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3 py-2.5 text-sm text-slate-100 outline-none placeholder:text-[#798194] focus:border-[#3b4760]"
@@ -913,13 +952,37 @@ function Sponsor() {
 
   return (
     <div className="min-h-screen grid grid-cols-1 bg-[#10141d] text-slate-100 lg:grid-cols-[250px_1fr]">
-      <aside className="flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4">
-        <h1 className="m-0 flex items-center gap-2 text-2xl font-semibold text-[#1f1f1f] lg:text-[24px]">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#1f1f1f] text-base text-[#ff9f1a]">
-            ◎
-          </span>
-          <span>Event EMS</span>
-        </h1>
+      <aside
+        className={`fixed left-0 top-0 z-40 h-screen w-64 transform transition-transform duration-300 lg:relative lg:z-auto lg:h-auto lg:w-auto lg:translate-x-0 ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
+        } flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4`}
+      >
+        <div className="flex items-center justify-between">
+          <h1 className="m-0 flex items-center gap-2 text-2xl font-semibold text-[#1f1f1f] lg:text-[24px]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#1f1f1f] text-base text-[#ff9f1a]">
+              ◎
+            </span>
+            <span>Event EMS</span>
+          </h1>
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="lg:hidden rounded-md p-1 text-[#1f1f1f] hover:bg-white/20"
+            aria-label="Close menu"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
 
         <nav className="flex flex-col gap-2.5" aria-label="Sidebar Navigation">
           {sidebarLinks.map((item) => (
@@ -929,7 +992,10 @@ function Sponsor() {
                 item === activePage ? "bg-[#10141d]/20 font-semibold" : ""
               }`}
               type="button"
-              onClick={() => setActivePage(item)}
+              onClick={() => {
+                setActivePage(item);
+                setMenuOpen(false);
+              }}
             >
               {item}
             </button>
@@ -944,10 +1010,35 @@ function Sponsor() {
         </div>
       </aside>
 
-      <main className="bg-[#151a23] p-4 sm:p-5 lg:p-6">
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      <main className="relative bg-[#151a23] p-4 sm:p-5 lg:p-6">
         <header className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-          {showSearch ? (
-            <div className="w-full max-w-[520px]">
+          <div className="flex items-center gap-3 w-full max-w-[520px]">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="lg:hidden rounded-md p-2 text-white hover:bg-white/10 bg-white/5 border border-white/10"
+              aria-label="Toggle menu"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 4a1 1 0 000 2h12a1 1 0 100-2H4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+            {showSearch ? (
               <input
                 className="w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none placeholder:text-[#798194] focus:border-[#3b4760]"
                 type="text"
@@ -955,35 +1046,35 @@ function Sponsor() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={
                   activePage === "Schedule List"
-                    ? "Search schedule by event, session, date..."
-                    : "Search events by name, location, date..."
+                    ? "Search schedule..."
+                    : "Search events..."
                 }
                 aria-label="Search"
               />
-            </div>
-          ) : (
-            <div className="w-full max-w-[520px]" />
-          )}
-          <div className="flex items-center justify-end gap-2.5 text-sm text-[#b6c0cf]">
-            <span>English</span>
-            <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-gradient-to-br from-[#44b7ff] to-[#6ad3ff] text-[13px] font-bold text-[#04131f]">
+            ) : null}
+          </div>
+          <div className="flex items-center justify-end gap-2.5 text-sm text-[#b6c0cf] w-full">
+            <span className="hidden sm:inline">English</span>
+            <span className="hidden sm:inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-gradient-to-br from-[#44b7ff] to-[#6ad3ff] text-[13px] font-bold text-[#04131f]">
               SP
             </span>
-            <span className="text-sm text-[#f3f6fb]">Sponsor Portal</span>
+            <span className="hidden sm:inline text-sm text-[#f3f6fb]">
+              Sponsor Portal
+            </span>
             <button
               type="button"
               onClick={() => {
                 clearSession();
                 navigate("/signin");
               }}
-              className="ml-3 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition"
+              className="ml-0 sm:ml-3 rounded-md bg-red-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-red-500 transition"
             >
               Logout
             </button>
           </div>
         </header>
 
-        <section className="my-4 text-sm text-[#97a2b6]">
+        <section className="my-4 text-xs sm:text-sm text-[#97a2b6]">
           <p>{breadcrumb}</p>
         </section>
 

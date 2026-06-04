@@ -10,7 +10,6 @@ import { format } from "date-fns";
 
 import { useNavigate } from "react-router-dom";
 
-
 const sidebarLinks = [
   "Dashboard",
   "Event Control",
@@ -27,7 +26,6 @@ const sidebarLinks = [
 ];
 
 // initialUsers/initialSchedule removed (manager now loads from backend)
-
 
 function formatPrice(value) {
   if (value == null || value === "") return "—";
@@ -48,7 +46,9 @@ async function fetchJson(url, options) {
     );
   }
   if (!res.ok) {
-    throw new Error(data?.error || data?.message || `Request failed (${res.status})`);
+    throw new Error(
+      data?.error || data?.message || `Request failed (${res.status})`,
+    );
   }
   return data;
 }
@@ -68,6 +68,7 @@ function statusPill(status) {
 
 function ManagerDashboard() {
   const [activePage, setActivePage] = useState("Dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const clearSession = () => {
@@ -298,7 +299,9 @@ function ManagerDashboard() {
       const data = await fetchJson(url);
       setSponsorshipRequests(Array.isArray(data) ? data : []);
     } catch (err) {
-      setSponsorshipError(err.message || "Nuk u ngarkuan kërkesat e sponsorizimit.");
+      setSponsorshipError(
+        err.message || "Nuk u ngarkuan kërkesat e sponsorizimit.",
+      );
       setSponsorshipRequests([]);
     } finally {
       setSponsorshipLoading(false);
@@ -361,7 +364,10 @@ function ManagerDashboard() {
   const filteredCoupons = useMemo(() => {
     if (!couponEventFilter) return coupons;
     return coupons.filter(
-      (c) => c.eventId === couponEventFilter || c.eventId == null || c.eventId === "",
+      (c) =>
+        c.eventId === couponEventFilter ||
+        c.eventId == null ||
+        c.eventId === "",
     );
   }, [coupons, couponEventFilter]);
 
@@ -457,8 +463,12 @@ function ManagerDashboard() {
       const body = {
         titulli: eventForm.titulli,
         pershkrimi: eventForm.pershkrimi,
-        data_fillimit: eventForm.data_fillimit ? format(eventForm.data_fillimit, "yyyy-MM-dd'T'HH:mm:ss") : null,
-        data_perfundimit: eventForm.data_perfundimit ? format(eventForm.data_perfundimit, "yyyy-MM-dd'T'HH:mm:ss") : null,
+        data_fillimit: eventForm.data_fillimit
+          ? format(eventForm.data_fillimit, "yyyy-MM-dd'T'HH:mm:ss")
+          : null,
+        data_perfundimit: eventForm.data_perfundimit
+          ? format(eventForm.data_perfundimit, "yyyy-MM-dd'T'HH:mm:ss")
+          : null,
         lokacioni: eventForm.lokacioni,
         kapaciteti:
           eventForm.kapaciteti !== "" ? Number(eventForm.kapaciteti) : null,
@@ -470,7 +480,9 @@ function ManagerDashboard() {
         lloji: eventForm.lloji || "Standard",
         cmimi: eventForm.cmimi !== "" ? Number(eventForm.cmimi) : 0,
         sasia_disponueshme:
-          eventForm.kapaciteti !== "" ? Number(eventForm.kapaciteti) : undefined,
+          eventForm.kapaciteti !== ""
+            ? Number(eventForm.kapaciteti)
+            : undefined,
       };
       if (eventForm.speaker_id) {
         body.speaker_id = Number(eventForm.speaker_id);
@@ -545,7 +557,6 @@ function ManagerDashboard() {
       setEventMessage(err.message || "Nuk u shtua user");
     }
   }
-
 
   const openEventEdit = (ev) => {
     const ticket = tickets.find((t) => String(t.event_id) === String(ev.id));
@@ -635,7 +646,9 @@ function ManagerDashboard() {
       if (!res.ok) throw new Error(data.error || "Gabim");
       await saveTicketFromEdit(values);
       await loadTickets();
-      setEvents((prev) => prev.map((x) => (x.id === values.id ? { ...x, ...data } : x)));
+      setEvents((prev) =>
+        prev.map((x) => (x.id === values.id ? { ...x, ...data } : x)),
+      );
       setEventEditOpen(false);
       setEventMessage("Eventi dhe bileta u përditësuan.");
     } catch (err) {
@@ -674,7 +687,9 @@ function ManagerDashboard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gabim");
-      setUsers((prev) => prev.map((x) => (x.id === values.id ? { ...x, ...data } : x)));
+      setUsers((prev) =>
+        prev.map((x) => (x.id === values.id ? { ...x, ...data } : x)),
+      );
       setUserEditOpen(false);
     } catch (err) {
       setUserEditMessage(err.message || "Nuk u përditësua user");
@@ -685,12 +700,15 @@ function ManagerDashboard() {
 
   async function addSchedule(e) {
     e.preventDefault();
-    if (!scheduleForm.event || !scheduleForm.session || !scheduleForm.slot) return;
+    if (!scheduleForm.event || !scheduleForm.session || !scheduleForm.slot)
+      return;
     // UI currently doesn't collect exact timestamps; derive from slot string.
     // Expected slot format is free text, so we do a minimal best-effort:
     // if slot looks like "HH:mm - HH:mm" use today's date.
     const today = new Date();
-    const parts = String(scheduleForm.slot).split("-").map((s) => s.trim());
+    const parts = String(scheduleForm.slot)
+      .split("-")
+      .map((s) => s.trim());
     const [startStr, endStr] = parts;
     const parseTime = (v) => {
       if (!v) return null;
@@ -733,7 +751,6 @@ function ManagerDashboard() {
     }
   }
 
-
   function renderDashboard() {
     return (
       <>
@@ -752,7 +769,9 @@ function ManagerDashboard() {
               className="flex items-center justify-between rounded-xl border border-[#283143] bg-[#1b212c] p-4"
             >
               <div>
-                <h2 className="m-0 text-[34px] leading-none text-white">{card.value}</h2>
+                <h2 className="m-0 text-[34px] leading-none text-white">
+                  {card.value}
+                </h2>
                 <p className="mt-1.5 text-sm text-[#9ca6b7]">{card.label}</p>
               </div>
               <span className="inline-flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[#2b3446] text-lg">
@@ -764,7 +783,9 @@ function ManagerDashboard() {
 
         <section className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
           <div className="mb-3.5 flex items-center justify-between">
-            <h3 className="m-0 text-xl text-[#f4f7fb]">Upcoming Future Events</h3>
+            <h3 className="m-0 text-xl text-[#f4f7fb]">
+              Upcoming Future Events
+            </h3>
             <button
               type="button"
               className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5"
@@ -775,11 +796,15 @@ function ManagerDashboard() {
           </div>
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
             {dashboardStatsLoading ? (
-              <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar eventet...</li>
+              <li className="text-[13px] text-[#95a2ba]">
+                Duke ngarkuar eventet...
+              </li>
             ) : null}
             {!dashboardStatsLoading &&
             (dashboardStats.futureEvents?.length ?? 0) === 0 ? (
-              <li className="text-[13px] text-[#95a2ba]">Nuk ka evente të ardhshme.</li>
+              <li className="text-[13px] text-[#95a2ba]">
+                Nuk ka evente të ardhshme.
+              </li>
             ) : null}
             {(dashboardStats.futureEvents || []).map((event) => (
               <li
@@ -787,11 +812,15 @@ function ManagerDashboard() {
                 className="flex items-start justify-between gap-3 rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
               >
                 <div>
-                  <p className="m-0 text-[14px] font-medium text-[#f8fbff]">{event.title}</p>
+                  <p className="m-0 text-[14px] font-medium text-[#f8fbff]">
+                    {event.title}
+                  </p>
                   <p className="mt-1 text-[13px] text-[#95a2ba]">
                     {event.host} · {event.date} · {event.time}
                   </p>
-                  <p className="mt-1 text-[12px] text-[#8f9ab0]">{event.location}</p>
+                  <p className="mt-1 text-[12px] text-[#8f9ab0]">
+                    {event.location}
+                  </p>
                 </div>
                 <span
                   className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(event.status)}`}
@@ -819,7 +848,9 @@ function ManagerDashboard() {
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholder="Titulli *"
               value={eventForm.titulli}
-              onChange={(e) => setEventForm((p) => ({ ...p, titulli: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, titulli: e.target.value }))
+              }
               required
             />
             <textarea
@@ -827,13 +858,17 @@ function ManagerDashboard() {
               placeholder="Përshkrimi"
               rows={3}
               value={eventForm.pershkrimi}
-              onChange={(e) => setEventForm((p) => ({ ...p, pershkrimi: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, pershkrimi: e.target.value }))
+              }
             />
             <DatePicker
               className="w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholderText="Data e fillimit *"
               selected={eventForm.data_fillimit}
-              onChange={(date) => setEventForm((p) => ({ ...p, data_fillimit: date }))}
+              onChange={(date) =>
+                setEventForm((p) => ({ ...p, data_fillimit: date }))
+              }
               showTimeSelect
               dateFormat="yyyy-MM-dd HH:mm"
               required
@@ -842,7 +877,9 @@ function ManagerDashboard() {
               className="w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholderText="Data e perfundimit *"
               selected={eventForm.data_perfundimit}
-              onChange={(date) => setEventForm((p) => ({ ...p, data_perfundimit: date }))}
+              onChange={(date) =>
+                setEventForm((p) => ({ ...p, data_perfundimit: date }))
+              }
               showTimeSelect
               dateFormat="yyyy-MM-dd HH:mm"
               required
@@ -851,7 +888,9 @@ function ManagerDashboard() {
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholder="Lokacioni *"
               value={eventForm.lokacioni}
-              onChange={(e) => setEventForm((p) => ({ ...p, lokacioni: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, lokacioni: e.target.value }))
+              }
               required
             />
             <input
@@ -860,13 +899,17 @@ function ManagerDashboard() {
               min={1}
               placeholder="Kapaciteti / sasia e biletave"
               value={eventForm.kapaciteti}
-              onChange={(e) => setEventForm((p) => ({ ...p, kapaciteti: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, kapaciteti: e.target.value }))
+              }
             />
             <input
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholder="Lloji i biletës"
               value={eventForm.lloji}
-              onChange={(e) => setEventForm((p) => ({ ...p, lloji: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, lloji: e.target.value }))
+              }
             />
             <input
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
@@ -875,13 +918,17 @@ function ManagerDashboard() {
               step="0.01"
               placeholder="Çmimi i biletës *"
               value={eventForm.cmimi}
-              onChange={(e) => setEventForm((p) => ({ ...p, cmimi: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, cmimi: e.target.value }))
+              }
               required
             />
             <select
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               value={eventForm.statusi}
-              onChange={(e) => setEventForm((p) => ({ ...p, statusi: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, statusi: e.target.value }))
+              }
             >
               <option value="aktiv">Aktiv</option>
               <option value="anuluar">Anuluar</option>
@@ -891,7 +938,10 @@ function ManagerDashboard() {
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               value={eventForm.publication_status}
               onChange={(e) =>
-                setEventForm((p) => ({ ...p, publication_status: e.target.value }))
+                setEventForm((p) => ({
+                  ...p,
+                  publication_status: e.target.value,
+                }))
               }
             >
               <option value="draft">Draft</option>
@@ -902,18 +952,24 @@ function ManagerDashboard() {
               type="number"
               placeholder="Organizer ID"
               value={eventForm.organizer_id}
-              onChange={(e) => setEventForm((p) => ({ ...p, organizer_id: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, organizer_id: e.target.value }))
+              }
             />
             <input
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholder="URL imazhi"
               value={eventForm.imazhi}
-              onChange={(e) => setEventForm((p) => ({ ...p, imazhi: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, imazhi: e.target.value }))
+              }
             />
             <select
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               value={eventForm.speaker_id}
-              onChange={(e) => setEventForm((p) => ({ ...p, speaker_id: e.target.value }))}
+              onChange={(e) =>
+                setEventForm((p) => ({ ...p, speaker_id: e.target.value }))
+              }
             >
               <option value="">— Speaker (opsional) —</option>
               {speakers.map((s) => (
@@ -928,13 +984,17 @@ function ManagerDashboard() {
                   className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
                   placeholder="Tema e prezantimit *"
                   value={eventForm.tema}
-                  onChange={(e) => setEventForm((p) => ({ ...p, tema: e.target.value }))}
+                  onChange={(e) =>
+                    setEventForm((p) => ({ ...p, tema: e.target.value }))
+                  }
                 />
                 <input
                   className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
                   type="time"
                   value={eventForm.ora}
-                  onChange={(e) => setEventForm((p) => ({ ...p, ora: e.target.value }))}
+                  onChange={(e) =>
+                    setEventForm((p) => ({ ...p, ora: e.target.value }))
+                  }
                   required
                 />
               </>
@@ -955,13 +1015,16 @@ function ManagerDashboard() {
           ) : null}
           <ul className="mt-4 flex list-none flex-col gap-3 p-0">
             {events.map((event) => (
-              <li key={event.id} className="flex items-center justify-between rounded-[10px] border border-[#293346] bg-[#161d27] p-3">
+              <li
+                key={event.id}
+                className="flex items-center justify-between rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
+              >
                 <div>
                   <p className="m-0 text-[14px] text-[#f8fbff]">{event.name}</p>
                   <p className="mt-1 text-[12px] text-[#95a2ba]">
                     {event.date} · {event.venue}
                   </p>
-{event.speakers?.length > 0 ? (
+                  {event.speakers?.length > 0 ? (
                     <div className="mt-1">
                       {event.speakers.map((s) => (
                         <div
@@ -988,13 +1051,21 @@ function ManagerDashboard() {
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(event.status)}`}>{event.status}</span>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(event.status)}`}
+                  >
+                    {event.status}
+                  </span>
                   <button
                     type="button"
                     className="rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2.5 py-1.5 text-[12px] text-[#f3f6fb] hover:bg-white/5 disabled:opacity-40"
                     onClick={() => toggleEventStatus(event.id)}
                     disabled={event.status === "Published"}
-                    title={event.status === "Published" ? "Toggle disabled for Published" : undefined}
+                    title={
+                      event.status === "Published"
+                        ? "Toggle disabled for Published"
+                        : undefined
+                    }
                   >
                     Toggle
                   </button>
@@ -1011,19 +1082,22 @@ function ManagerDashboard() {
                     type="button"
                     className="rounded-[8px] border border-rose-400/30 bg-[#11161f] px-2.5 py-1.5 text-[12px] text-rose-100 hover:bg-white/5"
                     onClick={async () => {
-                      const ok = window.confirm("Delete event?" );
+                      const ok = window.confirm("Delete event?");
                       if (!ok) return;
-                      const res = await fetch(eventCrudEndpoint(event.id), { method: "DELETE" });
+                      const res = await fetch(eventCrudEndpoint(event.id), {
+                        method: "DELETE",
+                      });
                       const data = await res.json().catch(() => ({}));
                       if (!res.ok) throw new Error(data.error || "Gabim");
-                      setEvents((prev) => prev.filter((x) => x.id !== event.id));
+                      setEvents((prev) =>
+                        prev.filter((x) => x.id !== event.id),
+                      );
                       await loadTickets();
                       setEventMessage("Eventi dhe biletat e tij u fshinë.");
                     }}
                   >
                     Delete
                   </button>
-
                 </div>
               </li>
             ))}
@@ -1043,14 +1117,18 @@ function ManagerDashboard() {
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholder="Full Name"
               value={userForm.name}
-              onChange={(e) => setUserForm((p) => ({ ...p, name: e.target.value }))}
+              onChange={(e) =>
+                setUserForm((p) => ({ ...p, name: e.target.value }))
+              }
               required
             />
 
             <select
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               value={userForm.role}
-              onChange={(e) => setUserForm((p) => ({ ...p, role: e.target.value }))}
+              onChange={(e) =>
+                setUserForm((p) => ({ ...p, role: e.target.value }))
+              }
             >
               <option>Attendee</option>
               <option>Speaker</option>
@@ -1062,7 +1140,9 @@ function ManagerDashboard() {
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholder="Email *"
               value={userForm.email}
-              onChange={(e) => setUserForm((p) => ({ ...p, email: e.target.value }))}
+              onChange={(e) =>
+                setUserForm((p) => ({ ...p, email: e.target.value }))
+              }
               type="email"
               required
             />
@@ -1071,7 +1151,9 @@ function ManagerDashboard() {
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholder="Password *"
               value={userForm.passwordi}
-              onChange={(e) => setUserForm((p) => ({ ...p, passwordi: e.target.value }))}
+              onChange={(e) =>
+                setUserForm((p) => ({ ...p, passwordi: e.target.value }))
+              }
               type="password"
               required
             />
@@ -1080,52 +1162,74 @@ function ManagerDashboard() {
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholder="Phone (optional)"
               value={userForm.telefoni}
-              onChange={(e) => setUserForm((p) => ({ ...p, telefoni: e.target.value }))}
+              onChange={(e) =>
+                setUserForm((p) => ({ ...p, telefoni: e.target.value }))
+              }
             />
 
             <input
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
               placeholder="Foto URL (optional)"
               value={userForm.fotoja}
-              onChange={(e) => setUserForm((p) => ({ ...p, fotoja: e.target.value }))}
+              onChange={(e) =>
+                setUserForm((p) => ({ ...p, fotoja: e.target.value }))
+              }
             />
 
             <button className="rounded-[10px] bg-[#ff8b0f] px-4 py-2.5 text-sm font-semibold text-[#17120c] hover:bg-[#ff9f1a]">
               Add User
             </button>
           </form>
-
         </article>
 
         <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
           <h3 className="m-0 text-xl text-[#f4f7fb]">User & Role List</h3>
           <ul className="mt-4 flex list-none flex-col gap-3 p-0">
             {users.map((user) => (
-              <li key={user.id} className="flex items-center justify-between rounded-[10px] border border-[#293346] bg-[#161d27] p-3">
+              <li
+                key={user.id}
+                className="flex items-center justify-between rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
+              >
                 <div>
                   <p className="m-0 text-[14px] text-[#f8fbff]">{user.name}</p>
-                  <p className="mt-1 text-[12px] text-[#95a2ba]">Role: {user.role}</p>
+                  <p className="mt-1 text-[12px] text-[#95a2ba]">
+                    Role: {user.role}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(user.status)}`}>{user.status}</span>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[11px] ${statusPill(user.status)}`}
+                  >
+                    {user.status}
+                  </span>
                   <button
                     type="button"
                     className="rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2.5 py-1.5 text-[12px] text-[#f3f6fb] hover:bg-white/5"
                     onClick={async () => {
-                      const nextStatus = user.status === "Active" ? "Suspended" : "Active";
+                      const nextStatus =
+                        user.status === "Active" ? "Suspended" : "Active";
                       try {
-                        const res = await fetch(`/api/manager/users/${user.id}/status`, {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ status: nextStatus }),
-                        });
+                        const res = await fetch(
+                          `/api/manager/users/${user.id}/status`,
+                          {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ status: nextStatus }),
+                          },
+                        );
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.error || "Gabim");
                         setUsers((prev) =>
-                          prev.map((x) => (x.id === user.id ? { ...x, status: data.status } : x)),
+                          prev.map((x) =>
+                            x.id === user.id
+                              ? { ...x, status: data.status }
+                              : x,
+                          ),
                         );
                       } catch (err) {
-                        setEventMessage(err.message || "Nuk u ndryshua statusi");
+                        setEventMessage(
+                          err.message || "Nuk u ndryshua statusi",
+                        );
                       }
                     }}
                   >
@@ -1137,7 +1241,11 @@ function ManagerDashboard() {
                     className="rounded-[8px] border border-amber-400/30 bg-[#11161f] px-2.5 py-1.5 text-[12px] text-amber-100 hover:bg-white/5 disabled:opacity-40"
                     onClick={() => openUserEdit(user)}
                     disabled={user.role === "SuperAdmin"}
-                    title={user.role === "SuperAdmin" ? "Managers cannot edit SuperAdmin" : undefined}
+                    title={
+                      user.role === "SuperAdmin"
+                        ? "Managers cannot edit SuperAdmin"
+                        : undefined
+                    }
                   >
                     Edit
                   </button>
@@ -1146,21 +1254,25 @@ function ManagerDashboard() {
                     type="button"
                     className="rounded-[8px] border border-rose-400/30 bg-[#11161f] px-2.5 py-1.5 text-[12px] text-rose-100 hover:bg-white/5 disabled:opacity-40"
                     onClick={async () => {
-                      const ok = window.confirm("Delete user?" );
+                      const ok = window.confirm("Delete user?");
                       if (!ok) return;
-                      const res = await fetch(userCrudEndpoint(user.id), { method: "DELETE" });
+                      const res = await fetch(userCrudEndpoint(user.id), {
+                        method: "DELETE",
+                      });
                       const data = await res.json().catch(() => ({}));
                       if (!res.ok) throw new Error(data.error || "Gabim");
                       setUsers((prev) => prev.filter((x) => x.id !== user.id));
                       setEventMessage("");
                     }}
                     disabled={user.role === "SuperAdmin"}
-                    title={user.role === "SuperAdmin" ? "Managers cannot delete SuperAdmin" : undefined}
+                    title={
+                      user.role === "SuperAdmin"
+                        ? "Managers cannot delete SuperAdmin"
+                        : undefined
+                    }
                   >
                     Delete
                   </button>
-
-
                 </div>
               </li>
             ))}
@@ -1187,7 +1299,9 @@ function ManagerDashboard() {
                 className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none"
                 placeholder={label}
                 value={scheduleForm[key]}
-                onChange={(e) => setScheduleForm((p) => ({ ...p, [key]: e.target.value }))}
+                onChange={(e) =>
+                  setScheduleForm((p) => ({ ...p, [key]: e.target.value }))
+                }
               />
             ))}
             <button className="rounded-[10px] bg-[#ff8b0f] px-4 py-2.5 text-sm font-semibold text-[#17120c] hover:bg-[#ff9f1a]">
@@ -1200,7 +1314,10 @@ function ManagerDashboard() {
           <h3 className="m-0 text-xl text-[#f4f7fb]">Schedule List</h3>
           <ul className="mt-4 flex list-none flex-col gap-3 p-0">
             {schedule.map((slot) => (
-              <li key={slot.id} className="rounded-[10px] border border-[#293346] bg-[#161d27] p-3">
+              <li
+                key={slot.id}
+                className="rounded-[10px] border border-[#293346] bg-[#161d27] p-3"
+              >
                 <p className="m-0 text-[14px] text-[#f8fbff]">{slot.session}</p>
                 <p className="mt-1 text-[12px] text-[#95a2ba]">
                   {slot.event} · {slot.slot} · {slot.speaker}
@@ -1296,7 +1413,10 @@ function ManagerDashboard() {
                         className="w-24 rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2 py-1.5 text-[12px] text-slate-100 outline-none"
                         onBlur={(e) => {
                           const val = e.target.value;
-                          if (val !== "" && Number(val) !== Number(ticket.cmimi)) {
+                          if (
+                            val !== "" &&
+                            Number(val) !== Number(ticket.cmimi)
+                          ) {
                             updateTicketPrice(ticket.id, val, ticket);
                           }
                         }}
@@ -1310,7 +1430,10 @@ function ManagerDashboard() {
                         className="w-20 rounded-[8px] border border-[#2b3446] bg-[#11161f] px-2 py-1.5 text-[12px] text-slate-100 outline-none"
                         onBlur={(e) => {
                           const val = e.target.value;
-                          if (val !== "" && Number(val) !== ticket.sasia_disponueshme) {
+                          if (
+                            val !== "" &&
+                            Number(val) !== ticket.sasia_disponueshme
+                          ) {
                             updateTicketQuantity(ticket.id, val);
                           }
                         }}
@@ -1329,7 +1452,10 @@ function ManagerDashboard() {
                 ))}
                 {!ticketsLoading && tickets.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-[13px] text-[#95a2ba]">
+                    <td
+                      colSpan={5}
+                      className="p-8 text-center text-[13px] text-[#95a2ba]"
+                    >
                       Nuk ka bileta. Krijoni një event për të gjeneruar biletën.
                     </td>
                   </tr>
@@ -1346,7 +1472,9 @@ function ManagerDashboard() {
     return (
       <section className="mt-4 rounded-xl border border-[#283143] bg-[#1b212c] p-4">
         <div className="mb-3.5 flex items-center justify-between">
-          <h3 className="m-0 text-xl text-[#f4f7fb]">Feedback nga përdoruesit</h3>
+          <h3 className="m-0 text-xl text-[#f4f7fb]">
+            Feedback nga përdoruesit
+          </h3>
           <button
             type="button"
             className="rounded-[10px] border border-[#2b3446] bg-[#11161f] px-3 py-2 text-[13px] text-[#f3f6fb] transition hover:bg-white/5"
@@ -1362,10 +1490,14 @@ function ManagerDashboard() {
 
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {feedbacksLoading ? (
-            <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar feedback-et...</li>
+            <li className="text-[13px] text-[#95a2ba]">
+              Duke ngarkuar feedback-et...
+            </li>
           ) : null}
           {!feedbacksLoading && managerFeedbacks.length === 0 ? (
-            <li className="text-[13px] text-[#95a2ba]">Nuk ka feedback ende.</li>
+            <li className="text-[13px] text-[#95a2ba]">
+              Nuk ka feedback ende.
+            </li>
           ) : null}
           {managerFeedbacks.map((fb) => (
             <li
@@ -1377,7 +1509,10 @@ function ManagerDashboard() {
                   <p className="m-0 text-[14px] font-medium text-[#f8fbff]">
                     {fb.eventTitle || "Event"}
                     {fb.eventLocation ? (
-                      <span className="font-normal text-[#95a2ba]"> · {fb.eventLocation}</span>
+                      <span className="font-normal text-[#95a2ba]">
+                        {" "}
+                        · {fb.eventLocation}
+                      </span>
                     ) : null}
                   </p>
                   <p className="mt-1 text-[12px] text-[#95a2ba]">
@@ -1427,11 +1562,14 @@ function ManagerDashboard() {
   async function updateSponsorshipStatus(id, status) {
     setSponsorshipError("");
     try {
-      await fetchJson(`/api/manager/sponsorships/${encodeURIComponent(id)}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
+      await fetchJson(
+        `/api/manager/sponsorships/${encodeURIComponent(id)}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        },
+      );
       await loadSponsorshipRequests();
     } catch (err) {
       setSponsorshipError(err.message || "Nuk u përditësua statusi.");
@@ -1554,7 +1692,9 @@ function ManagerDashboard() {
           ) : (
             <ul className="m-0 flex max-h-[520px] list-none flex-col gap-2 overflow-y-auto p-0">
               {contactMessages.length === 0 ? (
-                <li className="text-[13px] text-[#95a2ba]">Nuk ka mesazhe kontakti.</li>
+                <li className="text-[13px] text-[#95a2ba]">
+                  Nuk ka mesazhe kontakti.
+                </li>
               ) : null}
               {contactMessages.map((msg) => (
                 <li key={msg.id}>
@@ -1582,7 +1722,9 @@ function ManagerDashboard() {
                     <p className="mt-1 text-[12px] text-[#95a2ba]">
                       {msg.name} · {msg.email}
                     </p>
-                    <p className="mt-1 text-[11px] text-[#8f9ab0]">{msg.sentAt}</p>
+                    <p className="mt-1 text-[11px] text-[#8f9ab0]">
+                      {msg.sentAt}
+                    </p>
                   </button>
                 </li>
               ))}
@@ -1597,21 +1739,31 @@ function ManagerDashboard() {
             </p>
           ) : (
             <>
-              <h3 className="m-0 text-xl text-[#f4f7fb]">{selectedContact.subject}</h3>
+              <h3 className="m-0 text-xl text-[#f4f7fb]">
+                {selectedContact.subject}
+              </h3>
               <p className="mt-2 text-[13px] text-[#95a2ba]">
-                From: <span className="text-[#f8fbff]">{selectedContact.name}</span> (
+                From:{" "}
+                <span className="text-[#f8fbff]">{selectedContact.name}</span> (
                 {selectedContact.email})
               </p>
-              <p className="text-[12px] text-[#8f9ab0]">Sent: {selectedContact.sentAt}</p>
+              <p className="text-[12px] text-[#8f9ab0]">
+                Sent: {selectedContact.sentAt}
+              </p>
 
               <div className="mt-4 rounded-[10px] border border-[#293346] bg-[#161d27] p-3">
-                <p className="m-0 text-[12px] font-medium text-[#95a2ba]">Message</p>
+                <p className="m-0 text-[12px] font-medium text-[#95a2ba]">
+                  Message
+                </p>
                 <p className="mt-2 whitespace-pre-wrap text-[13px] text-[#e8edf5]">
                   {selectedContact.message}
                 </p>
               </div>
 
-              <form className="mt-4 grid gap-3" onSubmit={handleSendContactReply}>
+              <form
+                className="mt-4 grid gap-3"
+                onSubmit={handleSendContactReply}
+              >
                 <label className="text-[13px] text-[#95a2ba]">
                   Your reply (manager)
                   <textarea
@@ -1626,7 +1778,8 @@ function ManagerDashboard() {
                 {contactError && selectedContactId ? (
                   <p className="text-[13px] text-rose-300">{contactError}</p>
                 ) : null}
-                {selectedContact.status === "replied" && selectedContact.repliedAt ? (
+                {selectedContact.status === "replied" &&
+                selectedContact.repliedAt ? (
                   <p className="text-[12px] text-emerald-300/90">
                     Replied on {selectedContact.repliedAt}
                   </p>
@@ -1686,7 +1839,9 @@ function ManagerDashboard() {
 
         <ul className="m-0 mt-4 flex list-none flex-col gap-3 p-0">
           {!sponsorshipLoading && sponsorshipRequests.length === 0 ? (
-            <li className="text-[13px] text-[#95a2ba]">Nuk ka kërkesa sponsorizimi.</li>
+            <li className="text-[13px] text-[#95a2ba]">
+              Nuk ka kërkesa sponsorizimi.
+            </li>
           ) : null}
           {sponsorshipRequests.map((req) => (
             <li
@@ -1710,7 +1865,9 @@ function ManagerDashboard() {
                     Tier: {req.tier || "—"} · Budget: €{formatPrice(req.budget)}
                   </p>
                   {req.message ? (
-                    <p className="mt-2 text-[13px] text-[#95a2ba]">{req.message}</p>
+                    <p className="mt-2 text-[13px] text-[#95a2ba]">
+                      {req.message}
+                    </p>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
@@ -1724,14 +1881,18 @@ function ManagerDashboard() {
                       <button
                         type="button"
                         className="rounded-[8px] border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-[12px] text-emerald-100 hover:bg-emerald-500/20"
-                        onClick={() => updateSponsorshipStatus(req.id, "accepted")}
+                        onClick={() =>
+                          updateSponsorshipStatus(req.id, "accepted")
+                        }
                       >
                         Accept
                       </button>
                       <button
                         type="button"
                         className="rounded-[8px] border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-[12px] text-rose-100 hover:bg-rose-500/20"
-                        onClick={() => updateSponsorshipStatus(req.id, "rejected")}
+                        onClick={() =>
+                          updateSponsorshipStatus(req.id, "rejected")
+                        }
                       >
                         Reject
                       </button>
@@ -1812,7 +1973,9 @@ function ManagerDashboard() {
 
         <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="m-0 text-xl text-[#f4f7fb]">Certificates by Event</h3>
+            <h3 className="m-0 text-xl text-[#f4f7fb]">
+              Certificates by Event
+            </h3>
             <select
               className="rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3 py-2 text-sm text-slate-100 outline-none"
               value={certEventId}
@@ -1828,20 +1991,27 @@ function ManagerDashboard() {
           </div>
 
           {!certEventId ? (
-            <p className="text-[13px] text-[#95a2ba]">Zgjidh një event për të parë certifikatat.</p>
+            <p className="text-[13px] text-[#95a2ba]">
+              Zgjidh një event për të parë certifikatat.
+            </p>
           ) : null}
 
           {certEventId ? (
             <>
               <p className="text-[13px] text-[#95a2ba]">
-                {certEventData.eventTitle || "Event"} — {certEventData.totalIssued} të lëshuara
+                {certEventData.eventTitle || "Event"} —{" "}
+                {certEventData.totalIssued} të lëshuara
               </p>
               {certsLoading ? (
-                <p className="mt-3 text-[13px] text-[#95a2ba]">Duke ngarkuar...</p>
+                <p className="mt-3 text-[13px] text-[#95a2ba]">
+                  Duke ngarkuar...
+                </p>
               ) : (
                 <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
                   {certEventData.certificates.length === 0 ? (
-                    <li className="text-[13px] text-[#95a2ba]">Nuk ka certifikata për këtë event.</li>
+                    <li className="text-[13px] text-[#95a2ba]">
+                      Nuk ka certifikata për këtë event.
+                    </li>
                   ) : null}
                   {certEventData.certificates.map((cert) => (
                     <li
@@ -1855,7 +2025,9 @@ function ManagerDashboard() {
                         <p className="mt-0.5 font-mono text-[12px] text-emerald-200/90">
                           {cert.code}
                         </p>
-                        <p className="mt-0.5 text-[11px] text-[#8f9ab0]">{cert.issuedAt}</p>
+                        <p className="mt-0.5 text-[11px] text-[#8f9ab0]">
+                          {cert.issuedAt}
+                        </p>
                       </div>
                       <button
                         type="button"
@@ -1891,7 +2063,10 @@ function ManagerDashboard() {
               placeholder="Kodi *"
               value={couponForm.code}
               onChange={(e) =>
-                setCouponForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))
+                setCouponForm((p) => ({
+                  ...p,
+                  code: e.target.value.toUpperCase(),
+                }))
               }
               required
             />
@@ -2004,7 +2179,9 @@ function ManagerDashboard() {
                 <tbody className="divide-y divide-[#2b3446]">
                   {filteredCoupons.map((c) => (
                     <tr key={c.id} className="hover:bg-[#1f2633]/40">
-                      <td className="p-3 font-mono text-emerald-200/90">{c.code}</td>
+                      <td className="p-3 font-mono text-emerald-200/90">
+                        {c.code}
+                      </td>
                       <td className="p-3 text-[#f4f7fb]">
                         {c.discountType === "percentage"
                           ? `${c.discountValue}%`
@@ -2016,7 +2193,9 @@ function ManagerDashboard() {
                       <td className="p-3">
                         <span
                           className={`rounded-full border px-2 py-0.5 text-[11px] ${
-                            c.isActive ? statusPill("Active") : statusPill("Suspended")
+                            c.isActive
+                              ? statusPill("Active")
+                              : statusPill("Suspended")
                           }`}
                         >
                           {c.isActive ? "Active" : "Inactive"}
@@ -2051,7 +2230,10 @@ function ManagerDashboard() {
                   ))}
                   {!couponsLoading && filteredCoupons.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-8 text-center text-[#95a2ba]">
+                      <td
+                        colSpan={5}
+                        className="p-8 text-center text-[#95a2ba]"
+                      >
                         Nuk ka kuponë.
                       </td>
                     </tr>
@@ -2066,7 +2248,9 @@ function ManagerDashboard() {
   }
 
   function renderReports() {
-    const publishedEvents = events.filter((e) => e.status === "Published").length;
+    const publishedEvents = events.filter(
+      (e) => e.status === "Published",
+    ).length;
     const activeUsers = users.filter((u) => u.status === "Active").length;
     const totalTicketQty = tickets.reduce(
       (sum, t) => sum + (t.sasia_disponueshme || 0),
@@ -2076,14 +2260,27 @@ function ManagerDashboard() {
     return (
       <section className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Published Events", value: String(publishedEvents), icon: "✅" },
+          {
+            label: "Published Events",
+            value: String(publishedEvents),
+            icon: "✅",
+          },
           { label: "Active Users", value: String(activeUsers), icon: "🧑‍💼" },
           { label: "Total Tickets", value: String(tickets.length), icon: "🎟" },
-          { label: "Available Seats", value: String(totalTicketQty), icon: "📈" },
+          {
+            label: "Available Seats",
+            value: String(totalTicketQty),
+            icon: "📈",
+          },
         ].map((card) => (
-          <article key={card.label} className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
+          <article
+            key={card.label}
+            className="rounded-xl border border-[#283143] bg-[#1b212c] p-4"
+          >
             <p className="m-0 text-sm text-[#9ca6b7]">{card.label}</p>
-            <p className="mt-2 text-3xl font-semibold text-[#f8fbff]">{card.value}</p>
+            <p className="mt-2 text-3xl font-semibold text-[#f8fbff]">
+              {card.value}
+            </p>
             <p className="mt-2 text-lg">{card.icon}</p>
           </article>
         ))}
@@ -2096,7 +2293,8 @@ function ManagerDashboard() {
     if (activePage === "Event Categories") return <ManagerEventCategories />;
     if (activePage === "User & Role") return renderUserRole();
     if (activePage === "Schedule Control") return renderScheduleControl();
-    if (activePage === "Sponsorship Requests") return renderSponsorshipRequests();
+    if (activePage === "Sponsorship Requests")
+      return renderSponsorshipRequests();
     if (activePage === "Ticket Management") return renderTickets();
     if (activePage === "Feedback") return renderFeedback();
     if (activePage === "Contact Messages") return renderContactMessages();
@@ -2106,16 +2304,39 @@ function ManagerDashboard() {
     return renderDashboard();
   }
 
-
   return (
     <div className="min-h-screen grid grid-cols-1 bg-[#10141d] text-slate-100 lg:grid-cols-[250px_1fr]">
-      <aside className="flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4">
-        <h1 className="m-0 flex items-center gap-2 text-2xl font-semibold text-[#1f1f1f] lg:text-[24px]">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#1f1f1f] text-base text-[#ff9f1a]">
-            ◎
-          </span>
-          <span>Event EMS</span>
-        </h1>
+      <aside
+        className={`fixed left-0 top-0 z-40 h-screen w-64 transform transition-transform duration-300 lg:relative lg:z-auto lg:h-auto lg:w-auto lg:translate-x-0 ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
+        } flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4`}
+      >
+        <div className="flex items-center justify-between">
+          <h1 className="m-0 flex items-center gap-2 text-2xl font-semibold text-[#1f1f1f] lg:text-[24px]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#1f1f1f] text-base text-[#ff9f1a]">
+              ◎
+            </span>
+            <span>Event EMS</span>
+          </h1>
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="lg:hidden rounded-md p-1 text-[#1f1f1f] hover:bg-white/20"
+            aria-label="Close menu"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
 
         <nav className="flex flex-col gap-2.5" aria-label="Manager Navigation">
           {sidebarLinks.map((item) => (
@@ -2125,7 +2346,10 @@ function ManagerDashboard() {
                 item === activePage ? "bg-[#10141d]/20 font-semibold" : ""
               }`}
               type="button"
-              onClick={() => setActivePage(item)}
+              onClick={() => {
+                setActivePage(item);
+                setMenuOpen(false);
+              }}
             >
               {item}
             </button>
@@ -2133,9 +2357,34 @@ function ManagerDashboard() {
         </nav>
       </aside>
 
-      <main className="bg-[#151a23] p-4 sm:p-5 lg:p-6">
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      <main className="relative bg-[#151a23] p-4 sm:p-5 lg:p-6">
         <header className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-          <div className="w-full max-w-[520px]">
+          <div className="flex items-center gap-3 w-full max-w-[520px]">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="lg:hidden rounded-md p-2 text-white hover:bg-white/10 bg-white/5 border border-white/10"
+              aria-label="Toggle menu"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 4a1 1 0 000 2h12a1 1 0 100-2H4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
             <input
               className="w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none placeholder:text-[#798194] focus:border-[#3b4760]"
               type="text"
@@ -2143,19 +2392,21 @@ function ManagerDashboard() {
               aria-label="Search manager items"
             />
           </div>
-          <div className="flex items-center justify-end gap-2.5 text-sm text-[#b6c0cf]">
-            <span>English</span>
-            <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-gradient-to-br from-[#44b7ff] to-[#6ad3ff] text-[13px] font-bold text-[#04131f]">
+          <div className="flex items-center justify-end gap-2.5 text-sm text-[#b6c0cf] w-full">
+            <span className="hidden sm:inline">English</span>
+            <span className="hidden sm:inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-gradient-to-br from-[#44b7ff] to-[#6ad3ff] text-[13px] font-bold text-[#04131f]">
               MG
             </span>
-            <span className="text-sm text-[#f3f6fb]">Manager</span>
+            <span className="hidden sm:inline text-sm text-[#f3f6fb]">
+              Manager
+            </span>
             <button
               type="button"
               onClick={() => {
                 clearSession();
                 navigate("/signin");
               }}
-              className="ml-3 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition"
+              className="ml-0 sm:ml-3 rounded-md bg-red-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-red-500 transition"
             >
               Logout
             </button>
@@ -2163,7 +2414,7 @@ function ManagerDashboard() {
         </header>
 
         {activePage !== "Dashboard" ? (
-          <section className="my-4 text-sm text-[#97a2b6]">
+          <section className="my-4 text-xs sm:text-sm text-[#97a2b6]">
             <p>Home / Manager / {activePage}</p>
           </section>
         ) : null}
@@ -2178,12 +2429,44 @@ function ManagerDashboard() {
           message={eventEditMessage}
           initialValues={eventEditValues || {}}
           fields={[
-            { key: "titulli", label: "Title", required: true, placeholder: "Event title" },
-            { key: "pershkrimi", label: "Description", placeholder: "Description", type: "textarea" },
-            { key: "data_fillimit", label: "Start (display)", required: false, placeholder: "YYYY-MM-DD HH:mm" },
-            { key: "data_perfundimit", label: "End (display)", required: false, placeholder: "YYYY-MM-DD HH:mm" },
-            { key: "lokacioni", label: "Venue", required: true, placeholder: "Location" },
-            { key: "kapaciteti", label: "Capacity", required: false, placeholder: "Capacity", type: "number", min: 0 },
+            {
+              key: "titulli",
+              label: "Title",
+              required: true,
+              placeholder: "Event title",
+            },
+            {
+              key: "pershkrimi",
+              label: "Description",
+              placeholder: "Description",
+              type: "textarea",
+            },
+            {
+              key: "data_fillimit",
+              label: "Start (display)",
+              required: false,
+              placeholder: "YYYY-MM-DD HH:mm",
+            },
+            {
+              key: "data_perfundimit",
+              label: "End (display)",
+              required: false,
+              placeholder: "YYYY-MM-DD HH:mm",
+            },
+            {
+              key: "lokacioni",
+              label: "Venue",
+              required: true,
+              placeholder: "Location",
+            },
+            {
+              key: "kapaciteti",
+              label: "Capacity",
+              required: false,
+              placeholder: "Capacity",
+              type: "number",
+              min: 0,
+            },
             { key: "lloji", label: "Lloji i biletës", placeholder: "Standard" },
             {
               key: "cmimi",
@@ -2232,19 +2515,24 @@ function ManagerDashboard() {
           message={userEditMessage}
           initialValues={userEditValues || {}}
           fields={[
-            { key: "name", label: "Full name", required: true, placeholder: "Name" },
-            { key: "email", label: "Email", required: true, placeholder: "Email" },
+            {
+              key: "name",
+              label: "Full name",
+              required: true,
+              placeholder: "Name",
+            },
+            {
+              key: "email",
+              label: "Email",
+              required: true,
+              placeholder: "Email",
+            },
             {
               key: "role",
               label: "Role",
               required: true,
               type: "select",
-              options: [
-                "Attendee",
-                "Speaker",
-                "Organizer",
-                "Manager",
-              ],
+              options: ["Attendee", "Speaker", "Organizer", "Manager"],
             },
             {
               key: "status",
@@ -2267,4 +2555,3 @@ function ManagerDashboard() {
 }
 
 export default ManagerDashboard;
-

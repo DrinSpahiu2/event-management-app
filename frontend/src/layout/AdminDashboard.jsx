@@ -1,30 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import AdminUsersList from "./AdminUsersList.jsx"; // 
+import AdminUsersList from "./AdminUsersList.jsx"; //
 
 import AdminEvents from "./AdminEvents.jsx";
 import ManagerPurchases from "./ManagerPurchases.jsx";
 
-
 const clearSession = () => {
-
   localStorage.removeItem("isLoggedIn");
   localStorage.removeItem("userId");
   localStorage.removeItem("userEmail");
   localStorage.removeItem("userRole");
 };
-const sidebarLinks = [
-  "Dashboard",
-  "Users List",
-  "Speaker List",
-  "Attendant List",
-  "Upcoming Event",
-  "Calendar",
-  "Venue",
-  "Purchases",
-  "Profile",
-];
+const sidebarLinks = ["Dashboard", "Users List", "Upcoming Event", "Purchases"];
 
 function formatIncome(value) {
   return new Intl.NumberFormat("en-US", {
@@ -36,6 +24,7 @@ function formatIncome(value) {
 
 function AdminDashboard() {
   const [activeView, setActiveView] = useState("Dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const [dashboardStats, setDashboardStats] = useState({
@@ -52,7 +41,7 @@ function AdminDashboard() {
   }, []);
 
   async function loadDashboardStats() {
-     setStatsLoading(true);
+    setStatsLoading(true);
 
     setStatsError("");
     try {
@@ -74,7 +63,9 @@ function AdminDashboard() {
     () => [
       {
         label: "Future Events",
-        value: statsLoading ? "…" : String(dashboardStats.futureEventsCount ?? 0),
+        value: statsLoading
+          ? "…"
+          : String(dashboardStats.futureEventsCount ?? 0),
         icon: "📅",
       },
       {
@@ -99,20 +90,46 @@ function AdminDashboard() {
   );
   return (
     <div className="min-h-screen grid grid-cols-1 bg-[#10141d] text-slate-100 lg:grid-cols-[250px_1fr]">
-      <aside className="flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4">
-        <h1 className="m-0 flex items-center gap-2 text-2xl font-semibold text-[#1f1f1f] lg:text-[24px]">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#1f1f1f] text-base text-[#ff9f1a]">
-            ◎
-          </span>
-          <span>Event EMS</span>
-        </h1>
+      <aside
+        className={`fixed left-0 top-0 z-40 h-screen w-64 transform transition-transform duration-300 lg:relative lg:z-auto lg:h-auto lg:w-auto lg:translate-x-0 ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
+        } flex flex-col gap-7 bg-gradient-to-b from-[#ff9f1a] to-[#ff7a00] p-5 lg:p-4`}
+      >
+        <div className="flex items-center justify-between">
+          <h1 className="m-0 flex items-center gap-2 text-2xl font-semibold text-[#1f1f1f] lg:text-[24px]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#1f1f1f] text-base text-[#ff9f1a]">
+              ◎
+            </span>
+            <span>Event EMS</span>
+          </h1>
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="lg:hidden rounded-md p-1 text-[#1f1f1f] hover:bg-white/20"
+            aria-label="Close menu"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
 
         <nav className="flex flex-col gap-2.5" aria-label="Sidebar Navigation">
           {sidebarLinks.map((item) => (
-
             <button
               key={item}
-              onClick={() => setActiveView(item)} // 👈 Changes view when sidebar item is clicked
+              onClick={() => {
+                setActiveView(item);
+                setMenuOpen(false);
+              }}
               className={`rounded-[10px] border-0 px-3 py-2.5 text-left text-[15px] text-[#fff6e8] transition hover:bg-white/15 ${
                 item === activeView
                   ? "bg-[#10141d]/20 font-semibold text-white"
@@ -126,10 +143,35 @@ function AdminDashboard() {
         </nav>
       </aside>
 
-      <main className="bg-[#151a23] p-4 sm:p-5 lg:p-6">
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      <main className="relative bg-[#151a23] p-4 sm:p-5 lg:p-6">
         {/* Keep logout always visible (also works if something pushes content down) */}
         <header className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-          <div className="w-full max-w-[520px]">
+          <div className="flex items-center gap-3 w-full max-w-[520px]">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="lg:hidden rounded-md p-2 text-white hover:bg-white/10 bg-white/5 border border-white/10"
+              aria-label="Toggle menu"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm1 4a1 1 0 000 2h12a1 1 0 100-2H4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
             <input
               className="w-full rounded-[10px] border border-[#272f3d] bg-[#11161f] px-3.5 py-3 text-sm text-slate-100 outline-none placeholder:text-[#798194] focus:border-[#3b4760]"
               type="text"
@@ -137,26 +179,28 @@ function AdminDashboard() {
               aria-label="Search"
             />
           </div>
-          <div className="flex items-center justify-end gap-2.5 text-sm text-[#b6c0cf]">
+          <div className="flex items-center justify-end gap-2.5 text-sm text-[#b6c0cf] w-full">
             <span>English</span>
-            <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-gradient-to-br from-[#44b7ff] to-[#6ad3ff] text-[13px] font-bold text-[#04131f]">
+            <span className="hidden sm:inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-gradient-to-br from-[#44b7ff] to-[#6ad3ff] text-[13px] font-bold text-[#04131f]">
               JS
             </span>
-            <span className="text-sm text-[#f3f6fb]">Jhon Smith</span>
+            <span className="hidden sm:inline text-sm text-[#f3f6fb]">
+              Jhon Smith
+            </span>
             <button
               type="button"
               onClick={() => {
                 clearSession();
                 navigate("/signin");
               }}
-              className="ml-3 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition"
+              className="ml-0 sm:ml-3 rounded-md bg-red-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white hover:bg-red-500 transition"
             >
               Logout
             </button>
           </div>
         </header>
-
-        <section className="my-4 text-sm text-[#97a2b6]">
+        
+        <section className="my-4 text-xs sm:text-sm text-[#97a2b6]">
           <p>Home / {activeView}</p>
         </section>
 
@@ -168,7 +212,6 @@ function AdminDashboard() {
         ) : activeView === "Purchases" ? (
           <ManagerPurchases />
         ) : activeView === "Dashboard" ? (
-
           <>
             {statsError ? (
               <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -231,12 +274,9 @@ function AdminDashboard() {
                   ></div>
                 </div>
               </article>
-
               <article className="rounded-xl border border-[#283143] bg-[#1b212c] p-4">
                 <div className="mb-3.5 flex items-center justify-between">
-                  <h3 className="m-0 text-xl text-[#f4f7fb]">
-                    Future Events
-                  </h3>
+                  <h3 className="m-0 text-xl text-[#f4f7fb]">Future Events</h3>
                   <button
                     type="button"
                     onClick={loadDashboardStats}
@@ -247,9 +287,12 @@ function AdminDashboard() {
                 </div>
                 <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
                   {statsLoading ? (
-                    <li className="text-[13px] text-[#95a2ba]">Duke ngarkuar...</li>
+                    <li className="text-[13px] text-[#95a2ba]">
+                      Duke ngarkuar...
+                    </li>
                   ) : null}
-                  {!statsLoading && (dashboardStats.futureEvents?.length ?? 0) === 0 ? (
+                  {!statsLoading &&
+                  (dashboardStats.futureEvents?.length ?? 0) === 0 ? (
                     <li className="text-[13px] text-[#95a2ba]">
                       Nuk ka evente të ardhshme.
                     </li>
@@ -267,13 +310,15 @@ function AdminDashboard() {
                           {event.title}
                         </h4>
                         <p className="mt-1 text-[13px] text-[#95a2ba]">
-                          {event.host} · {event.date} · {event.time} · {event.location}
+                          {event.host} · {event.date} · {event.time} ·{" "}
+                          {event.location}
                         </p>
                       </div>
                     </li>
                   ))}
                 </ul>
-              </article>            </section>
+              </article>{" "}
+            </section>
           </>
         ) : (
           /* Fallback view for other undeveloped tabs */
