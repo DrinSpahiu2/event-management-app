@@ -182,7 +182,7 @@ function AdminDashboard() {
           <div className="flex items-center justify-end gap-2.5 text-sm text-[#b6c0cf] w-full">
             <span>English</span>
             <span className="hidden sm:inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-gradient-to-br from-[#44b7ff] to-[#6ad3ff] text-[13px] font-bold text-[#04131f]">
-              JS
+              SAP
             </span>
             <span className="hidden sm:inline text-sm text-[#f3f6fb]">
               Super Admin Portal
