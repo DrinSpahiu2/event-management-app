@@ -1,17 +1,18 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import AdminDashboard from "./layout/AdminDashboard.jsx";
-import EventDetailsPage from "./layout/EventDetailsPage.jsx";
-import Sponsor from "./layout/Sponsor.jsx";
-import TicketCheckoutPage from "./layout/TicketCheckoutPage.jsx";
-import About from "./pages/About.jsx";
-import Contact from "./pages/Contact.jsx";
-import LandingPage from "./landing/LandingPage.jsx";
-import SignIn from "./signin.jsx";
-import UserEventsPage from "./layout/UserEventsPage.jsx";
-import MyTicketsPage from "./layout/MyTicketsPage.jsx";
-import Menaxher from "./layout/Menaxher.jsx";
-import SpeakerDashboard from "./layout/SpeakerDashboard.jsx";
+const AdminDashboard = lazy(() => import("./layout/AdminDashboard.jsx"));
+const EventDetailsPage = lazy(() => import("./layout/EventDetailsPage.jsx"));
+const Sponsor = lazy(() => import("./layout/Sponsor.jsx"));
+const TicketCheckoutPage = lazy(() => import("./layout/TicketCheckoutPage.jsx"));
+const About = lazy(() => import("./pages/About.jsx"));
+const Contact = lazy(() => import("./pages/Contact.jsx"));
+const LandingPage = lazy(() => import("./landing/LandingPage.jsx"));
+const SignIn = lazy(() => import("./signin.jsx"));
+const UserEventsPage = lazy(() => import("./layout/UserEventsPage.jsx"));
+const MyTicketsPage = lazy(() => import("./layout/MyTicketsPage.jsx"));
+const Menaxher = lazy(() => import("./layout/Menaxher.jsx"));
+const SpeakerDashboard = lazy(() => import("./layout/SpeakerDashboard.jsx"));
 
 // Protected Route Component that handles permissions
 function ProtectedRoute({ children, allowedRoles }) {
@@ -31,7 +32,8 @@ function ProtectedRoute({ children, allowedRoles }) {
 
 export default function App() {
   return (
-    <Routes>
+    <Suspense fallback={null}>
+      <Routes>
       {/* Public Pages */}
       <Route path="/signin" element={<SignIn />} />
       <Route path="/" element={<LandingPage />} />
@@ -115,7 +117,8 @@ export default function App() {
 
       {/* Global Fallback Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
 
