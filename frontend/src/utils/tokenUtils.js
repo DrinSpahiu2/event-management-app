@@ -1,5 +1,6 @@
 // Simple JWT Token Management
 const TOKEN_KEY = "authToken";
+const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "authUser";
 
 export const tokenUtils = {
@@ -16,6 +17,7 @@ export const tokenUtils = {
   // Remove token from localStorage (logout)
   removeToken: () => {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   },
 
@@ -33,6 +35,16 @@ export const tokenUtils = {
   // Check if user is authenticated
   isAuthenticated: () => {
     return !!localStorage.getItem(TOKEN_KEY);
+  },
+
+  // Save refresh token
+  setRefreshToken: (token) => {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  },
+
+  // Get refresh token
+  getRefreshToken: () => {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
   },
 
   // Get authorization header for API calls

@@ -3,34 +3,18 @@
  * Use this pattern for authenticated API calls
  */
 
-import { tokenUtils } from "../utils/tokenUtils";
+import { requestWithRefresh } from "./requestWithRefresh";
 
 async function request(url, options = {}) {
-  // Add JWT token to headers
-  const headers = {
-    "Content-Type": "application/json",
-    ...tokenUtils.getAuthHeader(), // Adds "Authorization: Bearer {token}"
-    ...options.headers,
-  };
-
-  const res = await fetch(url, {
-    headers,
-    ...options,
-  });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.error || data.message || "Request failed");
-  }
-
-  return data;
+  return requestWithRefresh(url, options);
 }
+
 
 /** GET — Get current user's profile (requires auth) */
 export function getCurrentUserProfile() {
   return request("/api/profile");
 }
+
 
 // Example: You can add more authenticated endpoints here
 // export function getSomeProtectedData() {

@@ -12,6 +12,7 @@ app.use(express.json());
 
 // --- DATABASE CONNECTION WITH SEQUELIZE ---
 const db = require("./models");
+app.set("db", db);
 
 // --- IMPORT AUTH MIDDLEWARE ---
 const { verifyToken } = require("./utils/authMiddleware");
@@ -92,6 +93,7 @@ app.post("/api/signin", async (req, res) => {
   try {
     const { email, passwordi } = req.body;
 
+
     if (!email || !passwordi) {
       return res.status(400).json({ error: "Email and password required" });
     }
@@ -118,7 +120,8 @@ app.post("/api/signin", async (req, res) => {
 
     const roleName = user.userType ? user.userType.emri : "Client";
 
-    // Generate JWT token
+
+    // Generate JWT access token
     const token = jwt.sign(
       {
         id: user.id,
@@ -129,9 +132,23 @@ app.post("/api/signin", async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // Generate refresh token (opaque string stored in DB)
+    const refreshToken = require("crypto").randomBytes(64).toString("hex");
+
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+
+    await db.RefreshToken.create({
+      token: refreshToken,
+      user_id: user.id,
+      expires_at: expiresAt,
+      revoked_at: null,
+    });
+
     res.json({
       message: "Sign in successful",
-      token, // Add token here
+      token, // access token
+      refreshToken,
       userId: user.id,
       email: user.email,
       emri: user.emri,
@@ -143,6 +160,11 @@ app.post("/api/signin", async (req, res) => {
     res.status(500).json({ error: "Failed to sign in: " + error.message });
   }
 });
+
+// --- AUTH ROUTES ---
+const authRoutes = require("./routes/authRoutes");
+app.use("/api/auth", authRoutes);
+
 
 // --- PROTECTED ROUTE EXAMPLE: Get Current User Profile ---
 app.get("/api/profile", verifyToken, async (req, res) => {

@@ -185,7 +185,7 @@ function AdminDashboard() {
               JS
             </span>
             <span className="hidden sm:inline text-sm text-[#f3f6fb]">
-              Jhon Smith
+              Super Admin Portal
             </span>
             <button
               type="button"

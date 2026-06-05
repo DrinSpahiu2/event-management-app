@@ -124,7 +124,9 @@ export default function SignIn() {
       }
 
       // Save JWT token and user session details
-      tokenUtils.setToken(data.token); // Save JWT token
+      tokenUtils.setToken(data.token); // Save access JWT token
+      if (data.refreshToken) tokenUtils.setRefreshToken(data.refreshToken);
+
       tokenUtils.setUser({
         userId: data.userId,
         email: data.email,
