@@ -1,4 +1,4 @@
-// Simple JWT Token Management
+
 const TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "authUser";
